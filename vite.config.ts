@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  // En GitHub Pages la app vive bajo /Bordes/; en desarrollo, en la raíz.
+  base: process.env.BASE_PATH ?? "/",
   plugins: [
     VitePWA({
       registerType: "autoUpdate",
