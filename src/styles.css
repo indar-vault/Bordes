@@ -1,0 +1,48 @@
+/* Minimalista, con guiños de hilo. La estética "dibujada a mano" llega en la Fase 6. */
+[hidden] { display: none !important; }
+
+:root {
+  --ink: #3a3536;
+  --paper: #f6f1ee;
+  --card: #fff;
+  --accent: #6d3b5b;
+  --done: #2e7d4f;
+}
+
+body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: var(--paper); color: var(--ink); }
+.app { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+.nav { display: flex; gap: 8px; margin-bottom: 16px; }
+.nav button { background: none; border: 1px solid var(--ink); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
+.nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.hero-card { background: var(--card); border: 1px solid var(--ink); border-radius: 10px; padding: 14px; display: flex; gap: 12px; align-items: center; }
+.hero-pattern { width: 90px; height: 90px; border: 1.5px dashed var(--accent); border-radius: 8px; display: grid; place-items: center; font-size: 30px; }
+.progress { height: 8px; background: #e6ddd7; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+.progress-fill { height: 100%; background: var(--accent); }
+
+.widgets { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
+.widget { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px 14px; }
+.widget-num { font-size: 18px; font-weight: 700; display: block; }
+.widget-label { font-size: 12px; color: #6b6360; }
+
+.minis { display: flex; gap: 10px; flex-wrap: wrap; }
+.mini { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px; min-width: 180px; font: inherit; cursor: pointer; }
+
+.project-head { display: flex; gap: 16px; align-items: center; }
+.cover { width: 120px; height: 120px; border: 1.5px dashed var(--accent); border-radius: 8px; display: grid; place-items: center; font-size: 34px; }
+
+.btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
+.btn.ghost { background: #e8d9e2; color: var(--accent); }
+
+.threads { list-style: none; padding: 0; }
+.thread { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
+.spool { color: var(--c, var(--accent)); font-size: 16px; }
+.done-tag { color: var(--done); font-weight: 700; font-size: 12px; }
+.thread.done { opacity: 0.55; }
+
+.log li { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
+
+.timer, .counter, .media { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.timer-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--ink); border-radius: 6px; background: #fff; }
