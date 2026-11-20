@@ -16,13 +16,14 @@ npm install        # una vez
 npm run dev        # desarrollo (http://localhost:5173)
 npm run build      # build a dist/
 npm run test       # tests unitarios (vitest)
-npm run smoke      # build + prueba end-to-end real en Chromium (10 comprobaciones)
+npm run smoke      # build + prueba end-to-end real en Chromium (21 comprobaciones)
 ```
 
 `npm run smoke` requiere Chromium en `/usr/bin/chromium` (o cambiar
-`executablePath` en `scripts/smoke.mjs`). Verifica: alta de proyecto, sesión con
-puntadas y media, racha, persistencia tras recargar y **funcionamiento offline**
-gracias al service worker.
+`executablePath` en `scripts/smoke.mjs`). Verifica: importación de un patrón
+Flosscross (`.fcjson`), alta manual de proyecto, sesión con puntadas y media,
+carretes de la biblioteca, racha, persistencia tras recargar y
+**funcionamiento offline** gracias al service worker.
 
 `scripts/shot.mjs` genera capturas de pantalla de las pantallas en
 `/tmp/opencode/bordes-shots/` para revisar la estética.
@@ -42,6 +43,7 @@ src/
     progress.ts   lógica derivada (puntadas, racha, mes) — pura y testable
     repo.ts       acceso a datos
     export.ts     copia de seguridad JSON con schemaVersion
+    flosscross.ts importador de patrones Flosscross (.fcjson)
   screens/        Home, Project, Session, NewProject
   styles.css
 scripts/
