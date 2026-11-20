@@ -1,6 +1,7 @@
 // Prueba de humo end-to-end con Chromium real sobre la app servida.
 // Uso: npm run smoke   (levanta `vite preview` y abre http://localhost:4173)
 import puppeteer from "puppeteer-core";
+import { readFileSync } from "node:fs";
 
 const URL = process.env.SMOKE_URL ?? "http://localhost:4173/";
 
@@ -30,13 +31,38 @@ async function main() {
     console.log(`${cond ? "OK  " : "FAIL"} ${label}`);
     if (!cond) fails.push(label);
   };
+  let t = "";
 
   await page.goto(URL, { waitUntil: "networkidle0" });
 
   // 1. Home vacío
   check("Home muestra el estado vacío", (await text(page)).includes("Aún no hay proyectos"));
 
-  // 2. Crear proyecto (tecleando de verdad, para que React registre los cambios)
+  // 2. Importación Flosscross: el formulario se rellena solo
+  await clickByText(page, "Nuevo proyecto");
+  await page.waitForSelector(".fcjson-input");
+  const fixture = readFileSync("scripts/fixtures/ejemplo.fcjson", "utf8");
+  await page.evaluate((content, name) => {
+    const input = document.querySelector(".fcjson-input");
+    const dt = new DataTransfer();
+    dt.items.add(new File([content], name, { type: "application/json" }));
+    input.files = dt.files;
+    // React delega los eventos al root: hay que hacerlos bubbling.
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, fixture, "ejemplo.fcjson");
+  await page.waitForFunction(() => document.querySelector("#project-name").value === "Flor de lis", { timeout: 8000 });
+  t = await text(page);
+  check("El import detecta 9 puntadas, 3 colores y rejilla 3×4", t.includes("Importado: 9 puntadas, 3 colores, rejilla 3×4, imagen incluida"));
+  check("La tabla de colores se rellena (3 filas)", await page.evaluate(() => document.querySelectorAll(".colors tbody tr").length) === 3);
+  await clickByText(page, "Crear proyecto");
+  await page.waitForSelector(".project-head");
+  t = await text(page);
+  check("El proyecto importado arranca con 0 / 9", t.includes("0 / 9"));
+  check("Los colores importados mantienen DMC raros", t.includes("DMC 03") && t.includes("DMC 950"));
+  check("No se importan colores declarados sin puntadas", !t.includes("Sin puntadas"));
+
+  // 3. Crear proyecto manualmente (tecleando de verdad, para que React registre los cambios)
+  await clickByText(page, "Inicio");
   await clickByText(page, "Nuevo proyecto");
   await page.waitForSelector("#project-name");
   await page.type("#project-name", "Olivia Rodrigo");
@@ -45,7 +71,7 @@ async function main() {
 
   await clickByText(page, "Crear proyecto");
   await page.waitForSelector(".project-head");
-  let t = await text(page);
+  t = await text(page);
   check("Página del proyecto muestra el nombre", t.includes("Olivia Rodrigo"));
   check("Progreso inicial 0 / 3025", t.includes("0 / 3025"));
 
@@ -81,11 +107,24 @@ async function main() {
   t = await text(page);
   check("La biblioteca lista los hilos con su DMC", t.includes("Pearl Gray") && t.includes("DMC 415"));
   check("La biblioteca muestra dónde se usa cada hilo", t.includes("Olivia Rodrigo"));
-  await page.focus(".lib-spools");
-  await page.evaluate(() => document.querySelector(".lib-spools").select());
-  await page.type(".lib-spools", "3");
-  await clickByText(page, "Guardar");
-  await page.waitForFunction(() => Number(document.querySelector(".lib-spools").value) === 3, { timeout: 8000 });
+  // Editar los carretes del hilo concreto de Olivia (la lista tiene varios hilos).
+  let threadHandle = null;
+  for (const el of await page.$$(".threads .thread")) {
+    if ((await el.evaluate((e) => e.textContent)).includes("Olivia Rodrigo")) {
+      threadHandle = el;
+      break;
+    }
+  }
+  if (!threadHandle) throw new Error("No se encontró el hilo de Olivia en la biblioteca");
+  const spoolInput = await threadHandle.$(".lib-spools");
+  await spoolInput.evaluate((e) => e.select());
+  await spoolInput.focus();
+  await page.keyboard.type("3");
+  await (await threadHandle.$(".lib-save")).click();
+  await page.waitForFunction(
+    () => [...document.querySelectorAll(".thread")].some((li) => li.textContent.includes("Olivia Rodrigo") && Number(li.querySelector(".lib-spools").value) === 3),
+    { timeout: 8000 }
+  );
 
   // 6. Home: widgets
   await clickByText(page, "Inicio");
@@ -98,6 +137,7 @@ async function main() {
   await page.reload({ waitUntil: "networkidle0" });
   t = await text(page);
   check("Los datos persisten tras recargar", t.includes("Olivia Rodrigo") && t.includes("🔥 1"));
+  check("El proyecto importado también persiste", t.includes("Flor de lis"));
   await page.click(".hero-card");
   await page.waitForSelector(".project-head");
   await page.waitForFunction(() => document.body.innerText.includes("3 carrete(s)"), { timeout: 8000 });

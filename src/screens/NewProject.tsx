@@ -1,9 +1,25 @@
 import { useState } from "react";
 import { createProject, type NewColorInput } from "../util/repo";
+import { parseFlosscross } from "../util/flosscross";
+
+/** Redimensiona una data-URL a máx. 800 px para no llenar IndexedDB. */
+async function resizeDataUrl(url: string): Promise<string> {
+  const img = new Image();
+  await new Promise((resolve) => {
+    img.onload = resolve;
+    img.src = url;
+  });
+  const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
 
 /**
- * Alta manual de un proyecto (Fase 1). La importación .fcjson (Fase 4)
- * rellenará este mismo formulario automáticamente.
+ * Alta de un proyecto: manual o importando un patrón Flosscross (.fcjson),
+ * que rellena este mismo formulario.
  */
 export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
   const [name, setName] = useState("");
@@ -14,9 +30,26 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
   const [colors, setColors] = useState<NewColorInput[]>([
     { color: "#9FA6B1", name: "Pearl Gray", dmc: "415", spools: 1, totalStitches: 0 },
   ]);
+  const [importInfo, setImportInfo] = useState<string>("");
 
   function setColor(i: number, patch: Partial<NewColorInput>) {
     setColors((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  }
+
+  async function importFcjson(file: File) {
+    try {
+      const p = parseFlosscross(await file.text());
+      setName(p.name);
+      setTotal(p.totalStitches);
+      // Los carretes no se calculan: se editan a mano (decisión #9).
+      setColors(p.colors.map((c) => ({ ...c, spools: 1 })));
+      if (p.image) setImage(await resizeDataUrl(p.image));
+      setImportInfo(
+        `Importado: ${p.totalStitches} puntadas, ${p.colors.length} colores, rejilla ${p.width}×${p.height}${p.image ? ", imagen incluida" : ""}.`
+      );
+    } catch (err) {
+      setImportInfo(`No se pudo importar: ${(err as Error).message}`);
+    }
   }
 
   async function readImage(file: File) {
@@ -26,17 +59,7 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
       r.onerror = reject;
       r.readAsDataURL(file);
     });
-    // Redimensionar a máx. 800 px para no llenar IndexedDB con fotos grandes.
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, 800 / Math.max(img.width, img.height));
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-      setImage(canvas.toDataURL("image/jpeg", 0.85));
-    };
-    img.src = url;
+    setImage(await resizeDataUrl(url));
   }
 
   async function submit(e: React.FormEvent) {
@@ -50,6 +73,16 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
     <section class="screen">
       <h1>Nuevo proyecto</h1>
       <form class="form" onSubmit={submit}>
+        <label>
+          Importar patrón Flosscross (.fcjson)
+          <input
+            class="fcjson-input"
+            type="file"
+            accept=".fcjson,.json"
+            onChange={(e) => e.target.files && importFcjson(e.target.files[0])}
+          />
+        </label>
+        {importInfo && <p class="hint">{importInfo}</p>}
         <label>
           Nombre
           <input id="project-name" type="text" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Flor de lis" />
