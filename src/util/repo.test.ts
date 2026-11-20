@@ -10,6 +10,8 @@ import {
   getSessions,
   localISO,
   saveSession,
+  setReplacement,
+  threadUsage,
   updateProject,
 } from "./repo";
 import { buildBackup, restoreBackup, SCHEMA_VERSION } from "./export";
@@ -95,6 +97,28 @@ describe("repo (IndexedDB simulado)", () => {
   it("un color sin puntadas previstas no se marca completado", async () => {
     const id = await createProject({ name: "Cero", totalStitches: 10, colors: [{ color: "#333", name: "Sin usar", spools: 1, totalStitches: 0 }] });
     expect((await getProjectThreads(id))[0].complete).toBe(false);
+  });
+
+  it("reutiliza el hilo de la biblioteca cuando el DMC coincide", async () => {
+    const a = await createProject({ name: "A", totalStitches: 100, colors: [{ color: "#9FA6B1", name: "Pearl Gray", dmc: "415", spools: 2, totalStitches: 100 }] });
+    const b = await createProject({ name: "B", totalStitches: 50, colors: [{ color: "#9FA6B1", name: "Griso", dmc: "415", spools: 1, totalStitches: 50 }] });
+    const ta = await getProjectThreads(a);
+    const tb = await getProjectThreads(b);
+    expect(tb[0].pt.threadId).toBe(ta[0].pt.threadId); // mismo hilo global
+    const usage = await threadUsage();
+    expect(usage[ta[0].pt.threadId]!.length).toBe(2);
+  });
+
+  it("el toggle de reemplazo recuerda el hilo teórico del patrón", async () => {
+    const id = await createProject({ name: "Re", totalStitches: 10, colors: [{ color: "#eee", name: "Blanco", dmc: "White", spools: 1, totalStitches: 10 }] });
+    const pt = (await getProjectThreads(id))[0].pt;
+    expect(pt.isReplacement).toBe(false);
+    await setReplacement(pt.id!, "Crema 752");
+    const again = (await getProjectThreads(id))[0].pt;
+    expect(again.isReplacement).toBe(true);
+    expect(again.plannedName).toBe("Crema 752");
+    await setReplacement(pt.id!, null);
+    expect((await getProjectThreads(id))[0].pt.isReplacement).toBe(false);
   });
 
   it("exportar y restaurar devuelve los mismos datos", async () => {

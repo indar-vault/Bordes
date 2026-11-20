@@ -36,6 +36,22 @@ export interface NewProjectInput {
   colors: NewColorInput[];
 }
 
+/**
+ * Buscar en la biblioteca un hilo equivalente: primero por código DMC,
+ * si no, por nombre+color. Evita duplicados cuando dos proyectos usan el mismo hilo.
+ */
+export async function findThreadMatch(color: string, name: string, dmc?: string): Promise<Thread | undefined> {
+  const threads = await db.threads.toArray();
+  const d = (dmc || "").trim().toLowerCase();
+  if (d) {
+    const byDmc = threads.find((t) => (t.dmc || "").trim().toLowerCase() === d);
+    if (byDmc) return byDmc;
+  }
+  const n = name.trim().toLowerCase();
+  const c = color.trim().toLowerCase();
+  return threads.find((t) => t.name.trim().toLowerCase() === n && t.color.toLowerCase() === c);
+}
+
 export async function createProject(input: NewProjectInput): Promise<number> {
   const now = localISO();
   const colorsTotal = input.colors.reduce((sum, c) => sum + (c.totalStitches || 0), 0);
@@ -53,12 +69,14 @@ export async function createProject(input: NewProjectInput): Promise<number> {
   let order = 0;
   for (const c of input.colors) {
     if (!c.name.trim() && !c.color) continue;
-    const threadId = await db.threads.add({
-      color: c.color || "#000000",
+    const colorHex = c.color || "#000000";
+    const existing = await findThreadMatch(colorHex, c.name, c.dmc);
+    const threadId = existing?.id ?? (await db.threads.add({
+      color: colorHex,
       name: c.name.trim() || "Color sin nombre",
       dmc: c.dmc?.trim() || undefined,
       spools: c.spools,
-    });
+    }));
     await db.projectThreads.add({
       projectId,
       threadId,
@@ -114,12 +132,14 @@ export async function getProjectThreads(projectId: number): Promise<ThreadView[]
 export async function addColorToProject(projectId: number, input: NewColorInput): Promise<number> {
   const pts = await db.projectThreads.where({ projectId }).toArray();
   const order = pts.length;
-  const threadId = await db.threads.add({
-    color: input.color || "#000000",
+  const colorHex = input.color || "#000000";
+  const existing = await findThreadMatch(colorHex, input.name, input.dmc);
+  const threadId = existing?.id ?? (await db.threads.add({
+    color: colorHex,
     name: input.name.trim() || "Color sin nombre",
     dmc: input.dmc?.trim() || undefined,
     spools: input.spools,
-  });
+  }));
   const ptId = await db.projectThreads.add({
     projectId,
     threadId,
@@ -157,4 +177,32 @@ export async function deleteSession(id: number): Promise<void> {
 
 export async function getSessions(projectId: number): Promise<Session[]> {
   return db.sessions.where({ projectId }).sortBy("date");
+}
+
+/** Biblioteca global de hilos. */
+export async function listThreads(): Promise<Thread[]> {
+  return db.threads.toArray();
+}
+
+export async function updateThread(id: number, patch: Partial<Thread>): Promise<void> {
+  await db.threads.update(id, patch);
+}
+
+/** En un proyecto, un hilo puede ser un sustituto del color teórico del patrón. */
+export async function setReplacement(ptId: number, plannedName: string | null): Promise<void> {
+  const name = (plannedName ?? "").trim();
+  await db.projectThreads.update(ptId, { isReplacement: name !== "", plannedName: name });
+}
+
+/** Carretes que usan cada hilo (para la pantalla de biblioteca). */
+export async function threadUsage(): Promise<Record<number, string[]>> {
+  const pts = await db.projectThreads.toArray();
+  const projects = await db.projects.toArray();
+  const names = new Map<number, string>(projects.map((p) => [p.id!, p.name]));
+  const usage: Record<number, string[]> = {};
+  for (const pt of pts) {
+    const name = names.get(pt.projectId);
+    if (name) (usage[pt.threadId] ??= []).push(name);
+  }
+  return usage;
 }

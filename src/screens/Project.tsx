@@ -6,6 +6,7 @@ import {
   getProject,
   getProjectThreads,
   getSessions,
+  setReplacement,
   updateProject,
   type ThreadView,
 } from "../util/repo";
@@ -25,6 +26,8 @@ export function Project({
   const [threads, setThreads] = useState<ThreadView[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [newColor, setNewColor] = useState({ color: "#ffffff", name: "", dmc: "", spools: 1, totalStitches: 0 });
+  const [editingReplace, setEditingReplace] = useState<number | null>(null);
+  const [plannedName, setPlannedName] = useState("");
 
   async function refresh() {
     setProject(await getProject(projectId));
@@ -89,6 +92,36 @@ export function Project({
             </span>
             <span class="thread-num">{t.done} / {t.pt.totalStitches}</span>
             {t.complete && <span class="done-tag">Completado</span>}
+            <button
+              class="linklike"
+              onClick={() => {
+                setEditingReplace(t.pt.id!);
+                setPlannedName(t.pt.isReplacement ? t.pt.plannedName : t.thread.name);
+              }}
+            >
+              {t.pt.isReplacement ? `reemplaza a “${t.pt.plannedName}”` : "¿reemplaza a…?"}
+            </button>
+            {editingReplace === t.pt.id && (
+              <span class="replace-edit">
+                <input
+                  type="text"
+                  value={plannedName}
+                  onChange={(e) => setPlannedName(e.target.value)}
+                  placeholder="Hilo teórico del patrón"
+                />
+                <button
+                  class="btn ghost"
+                  onClick={async () => {
+                    await setReplacement(t.pt.id!, plannedName.trim() === t.thread.name ? null : plannedName);
+                    setEditingReplace(null);
+                    await refresh();
+                  }}
+                >
+                  Guardar
+                </button>
+                <button class="linklike" onClick={() => setEditingReplace(null)}>cancelar</button>
+              </span>
+            )}
           </li>
         ))}
       </ul>

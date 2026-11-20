@@ -65,19 +65,47 @@ async function main() {
   check("Aparece la sesión en el registro", t.includes("150 puntadas"));
   check("Se registra la serie vista", t.includes("Friends"));
 
-  // 4. Home: widgets
+  // 4. Toggle de reemplazo del hilo teórico (estamos en la página del proyecto)
+  await clickByText(page, "reemplaza");
+  await page.waitForSelector(".replace-edit input");
+  await page.evaluate(() => document.querySelector(".replace-edit input").select());
+  await page.type(".replace-edit input", "Crema 752");
+  await clickByText(page, "Guardar");
+  await page.waitForFunction(() => document.body.innerText.includes("Crema 752"), { timeout: 8000 });
+  t = await text(page);
+  check("El hilo marca a qué color teórico reemplaza", t.includes("reemplaza a “Crema 752”"));
+
+  // 5. Biblioteca global de hilos
+  await clickByText(page, "Hilos");
+  await page.waitForSelector(".threads .thread");
+  t = await text(page);
+  check("La biblioteca lista los hilos con su DMC", t.includes("Pearl Gray") && t.includes("DMC 415"));
+  check("La biblioteca muestra dónde se usa cada hilo", t.includes("Olivia Rodrigo"));
+  await page.focus(".lib-spools");
+  await page.evaluate(() => document.querySelector(".lib-spools").select());
+  await page.type(".lib-spools", "3");
+  await clickByText(page, "Guardar");
+  await page.waitForFunction(() => Number(document.querySelector(".lib-spools").value) === 3, { timeout: 8000 });
+
+  // 6. Home: widgets
   await clickByText(page, "Inicio");
   await page.waitForSelector(".widgets");
   t = await text(page);
   check("Home muestra la racha 🔥 1", t.includes("🔥 1"));
   check("Home muestra los episodios del mes", t.includes("episodios este mes"));
 
-  // 5. Persistencia tras recargar
+  // 7. Persistencia tras recargar
   await page.reload({ waitUntil: "networkidle0" });
   t = await text(page);
   check("Los datos persisten tras recargar", t.includes("Olivia Rodrigo") && t.includes("🔥 1"));
+  await page.click(".hero-card");
+  await page.waitForSelector(".project-head");
+  await page.waitForFunction(() => document.body.innerText.includes("3 carrete(s)"), { timeout: 8000 });
+  t = await text(page);
+  check("El proyecto refleja los 3 carretes editados", t.includes("3 carrete(s)"));
+  check("El reemplazo sobrevive a la recarga", t.includes("Crema 752"));
 
-  // 6. Offline: el service worker debe servir la app sin red
+  // 7. Offline: el service worker debe servir la app sin red
   await page.goto(URL, { waitUntil: "networkidle0" }); // deja los assets en caché
   await page.setOfflineMode(true);
   try {

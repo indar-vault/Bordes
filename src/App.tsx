@@ -3,8 +3,9 @@ import { Home } from "./screens/Home";
 import { Project } from "./screens/Project";
 import { Session } from "./screens/Session";
 import { NewProject } from "./screens/NewProject";
+import { Threads } from "./screens/Threads";
 
-type View = "home" | "project" | "session" | "new";
+type View = "home" | "project" | "session" | "new" | "threads";
 
 /**
  * Navegación mínima de la app (sin router): Inicio → Proyecto → Sesión.
@@ -28,8 +29,10 @@ export function App() {
       <nav class="nav" aria-label="Navegación">
         <button class={view === "home" ? "active" : ""} onClick={() => setView("home")}>Inicio</button>
         <button class={view === "new" ? "active" : ""} onClick={() => setView("new")}>Nuevo proyecto</button>
+        <button class={view === "threads" ? "active" : ""} onClick={() => setView("threads")}>Hilos</button>
       </nav>
       {view === "home" && <Home onOpenProject={openProject} onNewProject={() => setView("new")} />}
+      {view === "threads" && <Threads />}
       {view === "project" && projectId != null && (
         <Project projectId={projectId} onStartSession={startSession} onBack={() => setView("home")} />
       )}
