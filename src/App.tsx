@@ -2,27 +2,39 @@ import { useState } from "react";
 import { Home } from "./screens/Home";
 import { Project } from "./screens/Project";
 import { Session } from "./screens/Session";
-import { DUMMY } from "./dummy";
+import { NewProject } from "./screens/NewProject";
 
-type View = "home" | "project" | "session";
+type View = "home" | "project" | "session" | "new";
 
 /**
- * Wireframe de las tres pantallas (Fase 0/1). Los datos son falsos (src/dummy.ts);
- * en la Fase 1 se sustituyen por la base real (db.ts) con alta manual.
+ * Navegación mínima de la app (sin router): Inicio → Proyecto → Sesión.
+ * Los datos vienen de IndexedDB (src/db.ts); la lógica derivada, de util/progress.ts.
  */
 export function App() {
   const [view, setView] = useState<View>("home");
+  const [projectId, setProjectId] = useState<number | null>(null);
+
+  const openProject = (id: number) => {
+    setProjectId(id);
+    setView("project");
+  };
+  const startSession = (id: number) => {
+    setProjectId(id);
+    setView("session");
+  };
 
   return (
     <div class="app">
       <nav class="nav" aria-label="Navegación">
         <button class={view === "home" ? "active" : ""} onClick={() => setView("home")}>Inicio</button>
-        <button class={view === "project" ? "active" : ""} onClick={() => setView("project")}>Proyecto</button>
-        <button class={view === "session" ? "active" : ""} onClick={() => setView("session")}>Sesión</button>
+        <button class={view === "new" ? "active" : ""} onClick={() => setView("new")}>Nuevo proyecto</button>
       </nav>
-      {view === "home" && <Home dummy={DUMMY} onOpenProject={() => setView("project")} />}
-      {view === "project" && <Project dummy={DUMMY} onStartSession={() => setView("session")} />}
-      {view === "session" && <Session dummy={DUMMY} />}
+      {view === "home" && <Home onOpenProject={openProject} onNewProject={() => setView("new")} />}
+      {view === "project" && projectId != null && (
+        <Project projectId={projectId} onStartSession={startSession} onBack={() => setView("home")} />
+      )}
+      {view === "session" && projectId != null && <Session projectId={projectId} onDone={() => setView("project")} />}
+      {view === "new" && <NewProject onCreated={openProject} />}
     </div>
   );
 }

@@ -1,71 +1,123 @@
-import { useState } from "react";
-import type { DummyProject } from "../dummy";
+import { useEffect, useRef, useState } from "react";
+import type { Project, MediaType } from "../types";
+import { getProject, getProjectThreads, saveSession, type ThreadView } from "../util/repo";
 
-type Thread = DummyProject["threads"][number];
-
-export function Session({ dummy }: { dummy: DummyProject }) {
+export function Session({
+  projectId,
+  onDone,
+}: {
+  projectId: number;
+  onDone: () => void;
+}) {
+  const [project, setProject] = useState<Project | undefined>();
+  const [threads, setThreads] = useState<ThreadView[]>([]);
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [stitches, setStitches] = useState(0);
-  const [thread, setThread] = useState<DummyProject["threads"][0]>(dummy.threads[0]);
-  const [mediaType, setMediaType] = useState<"youtube" | "peli" | "serie" | "">("");
+  const [manualMin, setManualMin] = useState(0);
+  const [stitches, setStitches] = useState<Record<number, number>>({});
+  const [mediaType, setMediaType] = useState<MediaType | "">("");
   const [mediaTitle, setMediaTitle] = useState("");
   const [episodes, setEpisodes] = useState(0);
+  const [saved, setSaved] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    getProject(projectId).then(setProject);
+    getProjectThreads(projectId).then(setThreads);
+    return () => clearInterval(timer.current);
+  }, [projectId]);
 
   function start() {
     setRunning(true);
     setElapsed(0);
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
-    (window as any).__bordesTimer = t;
+    timer.current = window.setInterval(() => setElapsed((e) => e + 1), 1000);
   }
   function stop() {
     setRunning(false);
-    clearInterval((window as any).__bordesTimer);
+    clearInterval(timer.current);
+  }
+
+  const totalStitches = Object.values(stitches).reduce((a, b) => a + b, 0);
+  const durationMin = running || elapsed > 0 ? Math.max(1, Math.round(elapsed / 60)) : manualMin;
+
+  async function save() {
+    await saveSession({
+      projectId,
+      durationMin,
+      entries: threads
+        .filter((t) => t.pt.threadId)
+        .map((t) => ({ threadId: t.pt.threadId, stitches: stitches[t.pt.threadId] ?? 0 })),
+      media: mediaType ? { type: mediaType, title: mediaTitle || undefined, episodes: episodes || undefined } : undefined,
+    });
+    setSaved(true);
+    onDone();
   }
 
   return (
     <section class="screen">
-      <h1>Nueva sesión — {dummy.name}</h1>
+      <h1>Sesión — {project?.name ?? ""}</h1>
 
       <div class="timer">
         {running ? (
           <>
             <span class="timer-num">{Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}</span>
-            <button class="btn" onClick={stop}>Finalizar</button>
+            <button class="btn" onClick={stop}>Detener</button>
           </>
+        ) : elapsed > 0 ? (
+          <span class="timer-num">{Math.floor(elapsed / 60)} min</span>
         ) : (
-          <button class="btn" onClick={start}>▶ Empezar temporizador</button>
+          <>
+            <button class="btn" onClick={start}>▶ Empezar temporizador</button>
+            <label>
+              o sin temporizador:
+              <input type="number" value={manualMin} onChange={(e) => setManualMin(Number(e.target.value))} min={0} style={{ width: 70 }} />
+              <span>min</span>
+            </label>
+          </>
         )}
       </div>
 
       <div class="counter">
-        <label>
-          Color:
-          <select value={thread.name} onChange={(e) => setThread(dummy.threads.find((t) => t.name === e.target.value)!)}>
-            {dummy.threads.map((t) => <option key={t.name}>{t.name}</option>)}
-          </select>
-        </label>
-        <input type="number" value={stitches} onChange={(e) => setStitches(Number(e.target.value))} placeholder="Puntadas" />
-        <button class="btn">Guardar puntadas</button>
+        <h2>Puntadas por color</h2>
+        {threads.length === 0 && <p class="empty">Este proyecto no tiene colores todavía.</p>}
+        {threads.map((t) => (
+          <div class="counter-row" style={{ "--c": t.thread.color } as React.CSSProperties}>
+            <span class="spool" aria-hidden="true">●</span>
+            <span class="thread-name">{t.thread.name}</span>
+            <input
+              type="number"
+              value={stitches[t.pt.threadId] ?? 0}
+              onChange={(e) => setStitches((s) => ({ ...s, [t.pt.threadId]: Number(e.target.value) }))}
+              min={0}
+            />
+            <small>{t.done} / {t.pt.totalStitches}</small>
+            {t.complete && <span class="done-tag">Completado</span>}
+          </div>
+        ))}
+        <p>Total puntadas: <strong>{totalStitches}</strong></p>
       </div>
 
       <div class="media">
-        <label>Registrar lo que se ha visto</label>
-        <select value={mediaType} onChange={(e) => setMediaType(e.target.value as any)}>
-          <option value="">—</option>
-          <option value="youtube">YouTube</option>
-          <option value="peli">Película</option>
-          <option value="serie">Serie</option>
-        </select>
+        <label>
+          ¿Qué has visto mientras bordabas?
+          <select value={mediaType} onChange={(e) => setMediaType(e.target.value as MediaType | "")}>
+            <option value="">—</option>
+            <option value="youtube">YouTube</option>
+            <option value="peli">Película</option>
+            <option value="serie">Serie</option>
+          </select>
+        </label>
         {mediaType && (
           <>
-            <input type="text" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} placeholder={`Nombre (${mediaType})`} />
+            <input type="text" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} placeholder="Nombre" />
             {mediaType === "serie" && (
-              <input type="number" value={episodes} onChange={(e) => setEpisodes(Number(e.target.value))} placeholder="Episodios" />
+              <input type="number" value={episodes} onChange={(e) => setEpisodes(Number(e.target.value))} min={0} placeholder="Episodios" style={{ width: 80 }} />
             )}
           </>
         )}
       </div>
+
+      <button class="btn" onClick={save} disabled={saved}>Guardar sesión</button>
     </section>
   );
 }

@@ -7,6 +7,7 @@
   --card: #fff;
   --accent: #6d3b5b;
   --done: #2e7d4f;
+  --muted: #6b6360;
 }
 
 body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: var(--paper); color: var(--ink); }
@@ -16,24 +17,29 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .nav button { background: none; border: 1px solid var(--ink); border-radius: 6px; padding: 6px 12px; font: inherit; cursor: pointer; }
 .nav button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-.hero-card { background: var(--card); border: 1px solid var(--ink); border-radius: 10px; padding: 14px; display: flex; gap: 12px; align-items: center; }
-.hero-pattern { width: 90px; height: 90px; border: 1.5px dashed var(--accent); border-radius: 8px; display: grid; place-items: center; font-size: 30px; }
+.hero-card { background: var(--card); border: 1px solid var(--ink); border-radius: 10px; padding: 14px; display: flex; gap: 12px; align-items: center; cursor: pointer; }
+.hero-pattern, .cover { width: 90px; height: 90px; border: 1.5px dashed var(--accent); border-radius: 8px; display: grid; place-items: center; font-size: 30px; overflow: hidden; }
+.hero-pattern img, .cover img { width: 100%; height: 100%; object-fit: cover; }
+.cover { width: 120px; height: 120px; font-size: 34px; }
 .progress { height: 8px; background: #e6ddd7; border-radius: 4px; overflow: hidden; margin-top: 8px; }
 .progress-fill { height: 100%; background: var(--accent); }
 
 .widgets { display: flex; gap: 12px; margin: 16px 0; flex-wrap: wrap; }
 .widget { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px 14px; }
 .widget-num { font-size: 18px; font-weight: 700; display: block; }
-.widget-label { font-size: 12px; color: #6b6360; }
+.widget-label { font-size: 12px; color: var(--muted); }
 
 .minis { display: flex; gap: 10px; flex-wrap: wrap; }
 .mini { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px; min-width: 180px; font: inherit; cursor: pointer; }
 
 .project-head { display: flex; gap: 16px; align-items: center; }
-.cover { width: 120px; height: 120px; border: 1.5px dashed var(--accent); border-radius: 8px; display: grid; place-items: center; font-size: 34px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.gift { color: var(--accent); font-size: 13px; }
 
 .btn { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
 .btn.ghost { background: #e8d9e2; color: var(--accent); }
+.btn:disabled { opacity: 0.6; }
+.linklike { background: none; border: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
 
 .threads { list-style: none; padding: 0; }
 .thread { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
@@ -42,7 +48,24 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .thread.done { opacity: 0.55; }
 
 .log li { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
+.log p { margin: 4px 0; font-size: 14px; }
 
 .timer, .counter, .media { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.counter { flex-direction: column; align-items: stretch; }
+.counter-row { display: flex; align-items: center; gap: 10px; }
 .timer-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
 input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--ink); border-radius: 6px; background: #fff; }
+
+.form { display: flex; flex-direction: column; gap: 10px; background: var(--card); border: 1px solid var(--ink); border-radius: 10px; padding: 14px; }
+.form.inline { flex-direction: row; flex-wrap: wrap; align-items: center; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.form h2 { margin: 6px 0 2px; font-size: 16px; }
+.colors { border-collapse: collapse; width: 100%; }
+.colors th, .colors td { padding: 4px 6px; font-size: 13px; text-align: left; }
+.colors input { padding: 4px 6px; }
+.thumb { max-width: 220px; border: 1px solid var(--ink); border-radius: 8px; }
+
+.backup { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 20px; }
+.import { font-size: 13px; color: var(--muted); }
+.empty { color: var(--muted); }
+.msg { background: #eef7f0; border: 1px solid var(--done); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
