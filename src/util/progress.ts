@@ -34,12 +34,12 @@ export function threadProgress(sessions: Session[], threadId: number): number {
   );
 }
 
-/** ¿Está completado un hilo del proyecto? */
+/** ¿Está completado un hilo del proyecto? Un color sin puntadas previstas no cuenta. */
 export function isThreadComplete(
   sessions: Session[],
   pt: ProjectThread
 ): boolean {
-  return threadProgress(sessions, pt.threadId) >= pt.totalStitches;
+  return pt.totalStitches > 0 && threadProgress(sessions, pt.threadId) >= pt.totalStitches;
 }
 
 /** Día local de una fecha, en "AAAA-MM-DD" (la racha se cuenta en hora local). */

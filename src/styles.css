@@ -68,4 +68,5 @@ input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--ink); b
 .backup { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 20px; }
 .import { font-size: 13px; color: var(--muted); }
 .empty { color: var(--muted); }
+.hint { color: var(--muted); font-size: 13px; margin: 4px 0; }
 .msg { background: #eef7f0; border: 1px solid var(--done); border-radius: 8px; padding: 8px 12px; font-size: 14px; }

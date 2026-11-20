@@ -1,6 +1,6 @@
 import { db } from "../db";
 import type { MediaLog, Project, ProjectThread, Session, SessionEntry, Thread } from "../types";
-import { threadProgress } from "./progress";
+import { isThreadComplete, threadProgress } from "./progress";
 
 /**
  * Fecha/hora en hora LOCAL con su desfase (p. ej. "2026-11-20T09:30:00+01:00").
@@ -38,10 +38,11 @@ export interface NewProjectInput {
 
 export async function createProject(input: NewProjectInput): Promise<number> {
   const now = localISO();
+  const colorsTotal = input.colors.reduce((sum, c) => sum + (c.totalStitches || 0), 0);
   const projectId = await db.projects.add({
     name: input.name.trim(),
     image: input.image,
-    totalStitches: input.totalStitches,
+    totalStitches: input.totalStitches || colorsTotal,
     status: "activo",
     giftTo: input.giftTo?.trim() || undefined,
     notes: input.notes?.trim() ?? "",
@@ -104,7 +105,7 @@ export async function getProjectThreads(projectId: number): Promise<ThreadView[]
     const thread = await db.threads.get(pt.threadId);
     if (!thread) continue;
     const done = threadProgress(sessions, pt.threadId);
-    views.push({ pt, thread, done, complete: done >= pt.totalStitches });
+    views.push({ pt, thread, done, complete: isThreadComplete(sessions, pt) });
   }
   // Los completados bajan al final (menor prioridad), como pide el ticket.
   return views.sort((a, b) => Number(a.complete) - Number(b.complete) || a.pt.order - b.pt.order);

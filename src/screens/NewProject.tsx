@@ -86,6 +86,10 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
             ))}
           </tbody>
         </table>
+        <p class="hint">
+          Suma de colores: {colors.reduce((a, c) => a + (c.totalStitches || 0), 0)} puntadas
+          {total > 0 && total !== colors.reduce((a, c) => a + (c.totalStitches || 0), 0) ? " ≠ total indicado" : ""}
+        </p>
         <button type="button" class="btn ghost" onClick={() => setColors((cs) => [...cs, { color: "#ffffff", name: "", dmc: "", spools: 1, totalStitches: 0 }])}>
           + Añadir color
         </button>

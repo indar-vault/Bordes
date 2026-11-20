@@ -28,31 +28,35 @@ async function main() {
   await page.type("#project-total", "3025");
   await page.type(".color-total", "2615");
   await clickByText(page, "+ Añadir color");
-  await page.evaluate(() => {
-    const rows = document.querySelectorAll(".colors tbody tr");
-    const last = rows[rows.length - 1];
-    last.querySelector(".color-name").value = "Shell Pink";
-    last.querySelector(".color-total").value = "145";
-  });
+  await page.waitForSelector(".colors tbody tr:last-child .color-name");
+  await page.type(".colors tbody tr:last-child .color-name", "Shell Pink");
+  await page.type(".colors tbody tr:last-child .color-dmc", "224");
+  await page.type(".colors tbody tr:last-child .color-total", "145");
   await clickByText(page, "Crear proyecto");
   await page.waitForSelector(".project-head");
   await page.screenshot({ path: `${OUT}/proyecto-vacio.png`, fullPage: true });
 
   // Dos sesiones para ver el progreso
-  const add = async (stitches) => {
+  const add = async (values, withMedia = false) => {
     await clickByText(page, "Empezar sesión");
     await page.waitForSelector(".counter-row");
-    await page.evaluate((n) => {
-      document.querySelector('.timer input[type="number"]').value = String(45);
-    }, stitches);
-    await page.evaluate((n) => {
-      document.querySelector(".counter-row input[type=number]").value = String(n);
-    }, stitches);
+    await page.waitForSelector('.timer input[type="number"]');
+    await page.type('.timer input[type="number"]', "45");
+    for (let i = 0; i < values.length; i++) {
+      await page.waitForSelector(`.counter-row:nth-child(${i + 2}) input[type=number]`);
+      await page.type(`.counter-row:nth-child(${i + 2}) input[type=number]`, String(values[i]));
+    }
+    if (withMedia) {
+      await page.select(".media select", "serie");
+      await page.waitForSelector('.media input[type="text"]');
+      await page.type('.media input[type="text"]', "Friends");
+      await page.type('.media input[type="number"]', "2");
+    }
     await clickByText(page, "Guardar sesión");
     await page.waitForSelector(".project-head");
   };
-  await add(1200);
-  await add(800);
+  await add([1200], true);
+  await add([500, 145]);
   await page.screenshot({ path: `${OUT}/proyecto.png`, fullPage: true });
 
   await clickByText(page, "Inicio");

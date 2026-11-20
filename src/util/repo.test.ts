@@ -80,6 +80,23 @@ describe("repo (IndexedDB simulado)", () => {
     expect(streak(sessions, new Date("2026-11-20T12:00:00Z"))).toBe(2);
   });
 
+  it("si no se indica el total, lo deduce de la suma de colores", async () => {
+    const id = await createProject({
+      name: "Sin total",
+      totalStitches: 0,
+      colors: [
+        { color: "#111", name: "A", spools: 1, totalStitches: 100 },
+        { color: "#222", name: "B", spools: 1, totalStitches: 50 },
+      ],
+    });
+    expect((await getProject(id))!.totalStitches).toBe(150);
+  });
+
+  it("un color sin puntadas previstas no se marca completado", async () => {
+    const id = await createProject({ name: "Cero", totalStitches: 10, colors: [{ color: "#333", name: "Sin usar", spools: 1, totalStitches: 0 }] });
+    expect((await getProjectThreads(id))[0].complete).toBe(false);
+  });
+
   it("exportar y restaurar devuelve los mismos datos", async () => {
     const id = await createProject({ name: "Regalo", totalStitches: 50, giftTo: "Marta", colors: [{ color: "#333", name: "Verde", spools: 3, totalStitches: 50 }] });
     await saveSession({ projectId: id, durationMin: 30, entries: [{ threadId: 1, stitches: 25 }], media: { type: "serie", title: "Friends", episodes: 2 } });
