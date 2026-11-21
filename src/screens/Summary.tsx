@@ -54,7 +54,7 @@ export function Summary({
         </div>
         <div class="widget">
           <span class="widget-num">{s.sessions}</span>
-          <span class="widget-label">sesiones ({s.days} días) · media {formatMinutes(s.avgMinutes)}</span>
+          <span class="widget-label">{s.sessions === 1 ? "sesión" : "sesiones"} ({s.days} {s.days === 1 ? "día" : "días"}) · media {formatMinutes(s.avgMinutes)}</span>
         </div>
         <div class="widget">
           <span class="widget-num">{s.stitchesDone} / {s.totalStitches}</span>

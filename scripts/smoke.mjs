@@ -110,7 +110,7 @@ async function main() {
   await clickByText(page, "Ver resumen");
   await page.waitForFunction(() => document.body.innerText.includes("bordado en total") && !document.body.innerText.includes("Aún no hay sesiones"), { timeout: 8000 });
   t = await text(page);
-  check("El resumen muestra el tiempo y las sesiones", t.includes("45 min") && t.includes("sesiones (1 días)"));
+  check("El resumen muestra el tiempo y las sesiones", t.includes("45 min") && t.includes("sesión (1 día)"));
   check("El resumen muestra el progreso de la rejilla", t.includes("150 / 3025"));
   check("El resumen cuenta los colores y sus bobinas", t.includes("Colores") && t.includes("Pearl Gray") && t.includes("1"));
   check("El resumen suma los episodios vistos", t.includes("2 episodios"));
