@@ -52,12 +52,16 @@ async function main() {
   }, fixture, "ejemplo.fcjson");
   await page.waitForFunction(() => document.querySelector("#project-name").value === "Flor de lis", { timeout: 8000 });
   t = await text(page);
-  check("El import detecta 9 puntadas, 3 colores y rejilla 3×4", t.includes("Importado: 9 puntadas, 3 colores, rejilla 3×4, imagen incluida"));
+  check("El import detecta la rejilla 3×4 (12 celdas) y 9 puntadas reales", t.includes("Importado: rejilla 3×4 = 12 celdas (9 puntadas), 3 colores, imagen incluida."));
   check("La tabla de colores se rellena (3 filas)", await page.evaluate(() => document.querySelectorAll(".colors tbody tr").length) === 3);
+  check("Cada color importado trae un selector de hilo", await page.evaluate(() => document.querySelectorAll(".colors .color-thread").length) === 3);
+  check("El total precargado es la rejilla completa (12)", await page.evaluate(() => document.querySelector("#project-total").value) === "12");
   await clickByText(page, "Crear proyecto");
   await page.waitForSelector(".project-head");
   t = await text(page);
-  check("El proyecto importado arranca con 0 / 9", t.includes("0 / 9"));
+  check("El proyecto importado arranca con 0 / 12", t.includes("0 / 12"));
+  await page.waitForFunction(() => document.body.innerText.includes("DMC 03") && document.body.innerText.includes("DMC 950"), { timeout: 8000 });
+  t = await text(page);
   check("Los colores importados mantienen DMC raros", t.includes("DMC 03") && t.includes("DMC 950"));
   check("No se importan colores declarados sin puntadas", !t.includes("Sin puntadas"));
 
@@ -140,10 +144,33 @@ async function main() {
   check("El proyecto importado también persiste", t.includes("Flor de lis"));
   await page.click(".hero-card");
   await page.waitForSelector(".project-head");
-  await page.waitForFunction(() => document.body.innerText.includes("3 carrete(s)"), { timeout: 8000 });
+  await page.waitForFunction(() => document.body.innerText.includes("3 bobinas"), { timeout: 8000 });
   t = await text(page);
-  check("El proyecto refleja los 3 carretes editados", t.includes("3 carrete(s)"));
+  check("El proyecto refleja las 3 bobinas editadas", t.includes("3 bobinas"));
   check("El reemplazo sobrevive a la recarga", t.includes("Crema 752"));
+
+  // 8. Sustituir un color importado por un hilo de la biblioteca
+  await clickByText(page, "Inicio");
+  await page.waitForFunction(() => document.body.innerText.includes("Flor de lis"), { timeout: 8000 });
+  const opened = await page.evaluate(() => {
+    const el = [...document.querySelectorAll(".mini, .hero-card")].find((m) => m.textContent.includes("Flor de lis"));
+    if (!el) return false;
+    el.click();
+    return true;
+  });
+  check("Se puede abrir el proyecto importado desde los minis", opened);
+  await page.waitForSelector(".project-head");
+  await page.waitForFunction(() => document.body.innerText.includes("Flor de lis"), { timeout: 8000 });
+  await page.evaluate(() => {
+    const sel = document.querySelector(".thread-swap select");
+    const other = [...sel.options].find((o) => Number(o.value) !== Number(sel.value));
+    sel.value = other.value;
+    sel.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.body.innerText.includes("el patrón sugería"), { timeout: 8000 });
+  t = await text(page);
+  check("Al cambiar el hilo se conserva la sugerencia del patrón", t.includes("el patrón sugería “Rojo” · DMC 03"));
+  check("El progreso del color se mantiene tras el cambio", t.includes("0 / 4"));
 
   // 7. Offline: el service worker debe servir la app sin red
   await page.goto(URL, { waitUntil: "networkidle0" }); // deja los assets en caché

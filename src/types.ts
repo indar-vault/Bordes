@@ -22,8 +22,9 @@ export interface Thread {
 export interface ProjectThread {
   id?: number;
   projectId: number;
-  threadId: number;
-  plannedName: string; // el hilo "teórico" que el patrón pide
+  threadId: number; // el hilo REAL que se va a bordar
+  plannedName: string; // el color que el patrón sugiere (nombre original)
+  plannedDmc?: string; // su código DMC, si venía del patrón
   isReplacement: boolean; // este hilo reemplaza al teórico
   totalStitches: number; // puntadas previstas para este color en el patrón
   order: number; // prioridad de trabajo

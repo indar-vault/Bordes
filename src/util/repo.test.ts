@@ -11,6 +11,7 @@ import {
   localISO,
   saveSession,
   setReplacement,
+  swapProjectThread,
   threadUsage,
   updateProject,
 } from "./repo";
@@ -119,6 +120,37 @@ describe("repo (IndexedDB simulado)", () => {
     expect(again.plannedName).toBe("Crema 752");
     await setReplacement(pt.id!, null);
     expect((await getProjectThreads(id))[0].pt.isReplacement).toBe(false);
+  });
+
+  it("un color importado puede asignarse a un hilo existente de la biblioteca", async () => {
+    const lib = await db.threads.add({ color: "#F2C94C", name: "Girasol", dmc: "752", spools: 4 });
+    const id = await createProject({
+      name: "Importado",
+      totalStitches: 12,
+      colors: [{ color: "#ff0000", name: "Rojo", dmc: "03", spools: 1, totalStitches: 4, threadId: lib }],
+    });
+    const pt = (await getProjectThreads(id))[0];
+    expect(pt.thread.id).toBe(lib);          // se borda el hilo de la biblioteca
+    expect(pt.pt.plannedName).toBe("Rojo");  // pero se conserva la sugerencia del patrón
+    expect(pt.pt.plannedDmc).toBe("03");
+  });
+
+  it("cambiar el hilo a mitad de proyecto traspasa las puntadas registradas", async () => {
+    const id = await createProject({
+      name: "Cambio",
+      totalStitches: 100,
+      colors: [{ color: "#111", name: "Gris", dmc: "415", spools: 1, totalStitches: 100 }],
+    });
+    const first = (await getProjectThreads(id))[0];
+    await saveSession({ projectId: id, durationMin: 30, entries: [{ threadId: first.pt.threadId, stitches: 40 }] });
+    const other = await db.threads.add({ color: "#eee", name: "Blanco", dmc: "White", spools: 2 });
+    await swapProjectThread(first.pt.id!, other);
+
+    const after = await getProjectThreads(id);
+    expect(after[0].pt.threadId).toBe(other);
+    expect(after[0].pt.plannedName).toBe("Gris");
+    expect(after[0].done).toBe(40); // el progreso no se pierde al cambiar de hilo
+    expect((await getSessions(id))[0].entries[0].threadId).toBe(other);
   });
 
   it("exportar y restaurar devuelve los mismos datos", async () => {

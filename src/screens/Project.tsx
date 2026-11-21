@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import type { Project } from "../types";
+import type { Project, Thread } from "../types";
 import {
   addColorToProject,
   deleteSession,
   getProject,
   getProjectThreads,
   getSessions,
+  listThreads,
   setReplacement,
+  swapProjectThread,
   updateProject,
   type ThreadView,
 } from "../util/repo";
@@ -26,6 +28,7 @@ export function Project({
   const [threads, setThreads] = useState<ThreadView[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [newColor, setNewColor] = useState({ color: "#ffffff", name: "", dmc: "", spools: 1, totalStitches: 0 });
+  const [library, setLibrary] = useState<Thread[]>([]);
   const [editingReplace, setEditingReplace] = useState<number | null>(null);
   const [plannedName, setPlannedName] = useState("");
 
@@ -33,6 +36,7 @@ export function Project({
     setProject(await getProject(projectId));
     setThreads(await getProjectThreads(projectId));
     setSessions(await getSessions(projectId));
+    setLibrary(await listThreads());
   }
   useEffect(() => {
     refresh();
@@ -88,10 +92,32 @@ export function Project({
           >
             <span class="spool" aria-hidden="true">●</span>
             <span class="thread-name">
-              {t.thread.name} <small>DMC {t.thread.dmc || "—"} · {t.thread.spools} carrete(s)</small>
+              {t.thread.name} <small>DMC {t.thread.dmc || "—"} · {t.thread.spools} {t.thread.spools === 1 ? "bobina" : "bobinas"}</small>
+              {t.pt.plannedName && t.pt.plannedName !== t.thread.name && (
+                <small class="planned">
+                  (el patrón sugería “{t.pt.plannedName}”{t.pt.plannedDmc ? ` · DMC ${t.pt.plannedDmc}` : ""})
+                </small>
+              )}
             </span>
             <span class="thread-num">{t.done} / {t.pt.totalStitches}</span>
             {t.complete && <span class="done-tag">Completado</span>}
+            <label class="thread-swap">
+              <span class="usage">hilo usado</span>
+              <select
+                value={t.pt.threadId}
+                onChange={async (e) => {
+                  await swapProjectThread(t.pt.id!, Number(e.target.value));
+                  await refresh();
+                }}
+              >
+                {library.map((th) => (
+                  <option key={th.id} value={th.id}>
+                    {th.name}
+                    {th.dmc ? ` (${th.dmc})` : ""} — {th.spools} bob.
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               class="linklike"
               onClick={() => {

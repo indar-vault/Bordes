@@ -4,7 +4,7 @@ import type { Thread } from "../types";
 import { findThreadMatch, listThreads, threadUsage, updateThread } from "../util/repo";
 
 /**
- * Biblioteca global de hilos: color, nombre, DMC y carretes disponibles.
+ * Biblioteca global de hilos: color, nombre, DMC y bobinas disponibles.
  * Un mismo hilo puede participar en varios proyectos.
  */
 export function Threads() {
@@ -26,7 +26,7 @@ export function Threads() {
     if (!form.name.trim() && !form.dmc.trim()) return;
     const match = await findThreadMatch(form.color, form.name, form.dmc);
     if (match) {
-      setMsg(`Ya existe un hilo equivalente (${match.name}). Los carretes se gestionan en su fila.`);
+      setMsg(`Ya existe un hilo equivalente (${match.name}). Las bobinas se gestionan en su fila.`);
       return;
     }
     await db.threads.add({
@@ -71,7 +71,7 @@ export function Threads() {
               {t.name} <small>DMC {t.dmc || "—"}</small>
             </span>
             <label class="spools">
-              Carretes
+              Bobinas
               <input
                 class="lib-spools"
                 type="number"

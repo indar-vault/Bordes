@@ -23,8 +23,10 @@ export interface NewColorInput {
   color: string;
   name: string;
   dmc?: string;
-  spools: number;
+  spools?: number;
   totalStitches: number;
+  /** Hilo ya existente de la biblioteca; si no se indica, se crea uno nuevo. */
+  threadId?: number;
 }
 
 export interface NewProjectInput {
@@ -70,17 +72,24 @@ export async function createProject(input: NewProjectInput): Promise<number> {
   for (const c of input.colors) {
     if (!c.name.trim() && !c.color) continue;
     const colorHex = c.color || "#000000";
-    const existing = await findThreadMatch(colorHex, c.name, c.dmc);
-    const threadId = existing?.id ?? (await db.threads.add({
-      color: colorHex,
-      name: c.name.trim() || "Color sin nombre",
-      dmc: c.dmc?.trim() || undefined,
-      spools: c.spools,
-    }));
+    const plannedName = c.name.trim();
+    const plannedDmc = c.dmc?.trim() || undefined;
+    // El hilo que se bordará de verdad: el elegido a mano (importación), el que
+    // ya está en la biblioteca, o uno nuevo creado a partir de la sugerencia.
+    const existing = c.threadId ? await db.threads.get(c.threadId) : await findThreadMatch(colorHex, c.name, c.dmc);
+    const threadId =
+      existing?.id ??
+      (await db.threads.add({
+        color: colorHex,
+        name: plannedName || "Color sin nombre",
+        dmc: plannedDmc,
+        spools: c.spools ?? 1,
+      }));
     await db.projectThreads.add({
       projectId,
       threadId,
-      plannedName: c.name.trim(),
+      plannedName,
+      plannedDmc,
       isReplacement: false,
       totalStitches: c.totalStitches,
       order: order++,
@@ -138,7 +147,7 @@ export async function addColorToProject(projectId: number, input: NewColorInput)
     color: colorHex,
     name: input.name.trim() || "Color sin nombre",
     dmc: input.dmc?.trim() || undefined,
-    spools: input.spools,
+    spools: input.spools ?? 1,
   }));
   const ptId = await db.projectThreads.add({
     projectId,
@@ -192,6 +201,34 @@ export async function updateThread(id: number, patch: Partial<Thread>): Promise<
 export async function setReplacement(ptId: number, plannedName: string | null): Promise<void> {
   const name = (plannedName ?? "").trim();
   await db.projectThreads.update(ptId, { isReplacement: name !== "", plannedName: name });
+}
+
+/**
+ * Cambiar el hilo REAL de un color del proyecto (por ejemplo, el que Flosscross
+ * sugería por uno que ya tenemos en la biblioteca). Conserva la identidad
+ * sugerida (nombre, DMC) y las puntadas previstas.
+ */
+export async function swapProjectThread(ptId: number, threadId: number): Promise<void> {
+  const pt = await db.projectThreads.get(ptId);
+  if (!pt || pt.threadId === threadId) return;
+  await db.projectThreads.update(ptId, { threadId });
+
+  // Las puntadas ya bordadas quedan registradas contra el hilo antiguo;
+  // se traspasan al nuevo para no perder el progreso si el cambio se hace
+  // a mitad de proyecto.
+  const sessions = await db.sessions.where({ projectId: pt.projectId }).toArray();
+  for (const s of sessions) {
+    if (!s.entries.some((e) => e.threadId === pt.threadId)) continue;
+    const merged: SessionEntry[] = [];
+    for (const e of s.entries) {
+      const tid = e.threadId === pt.threadId ? threadId : e.threadId;
+      const dup = merged.find((m) => m.threadId === tid);
+      if (dup) dup.stitches += e.stitches;
+      else merged.push({ threadId: tid, stitches: e.stitches });
+    }
+    await db.sessions.update(s.id!, { entries: merged });
+  }
+  await db.projects.update(pt.projectId, { updatedAt: localISO() });
 }
 
 /** Carretes que usan cada hilo (para la pantalla de biblioteca). */

@@ -23,7 +23,7 @@ const fixture = {
           { rgb: [0, 255, 0], id: "745", name: "Unused green" },
         ],
         sources: [{ id: "img1", pos: [0, 0], size: [2, 2], visible: true }],
-        layers: [{ width: 2, height: 2, cross: [0, 1, 1, 2], backstitch: [] }],
+        layers: [{ width: 2, height: 2, cross: [0, 1, 1, 2], backstitch: [0, 0, 0, 1] }],
       },
     ],
   },
@@ -31,15 +31,33 @@ const fixture = {
 };
 
 describe("parseFlosscross", () => {
-  it("extrae nombre, rejilla, total y puntadas por color", () => {
+  it("el total es la rejilla completa (width × height), no las celdas llenas", () => {
     const p = parseFlosscross(JSON.stringify(fixture));
     expect(p.name).toBe("Flor de lis");
     expect(p.width).toBe(2);
     expect(p.height).toBe(2);
-    expect(p.totalStitches).toBe(3); // 4 celdas - 1 vacía
+    expect(p.totalStitches).toBe(4); // 2×2 celdas
+    expect(p.crossStitches).toBe(3); // una celda vacía
+    expect(p.backstitchStitches).toBe(1);
+  });
+
+  it("extrae las puntadas por color, incluyendo el atrás", () => {
+    const p = parseFlosscross(JSON.stringify(fixture));
     expect(p.colors.length).toBe(2); // el verde declarado pero sin puntadas se descarta
-    expect(p.colors[0]).toEqual({ color: "#ff0000", name: "Red", dmc: "03", totalStitches: 2 });
-    expect(p.colors[1]).toEqual({ color: "#0000ff", name: "Blue", dmc: "BLANC", totalStitches: 1 });
+    expect(p.colors[0]).toEqual({
+      color: "#ff0000",
+      name: "Red",
+      dmc: "03",
+      totalStitches: 2,
+      backstitchStitches: 1,
+    });
+    expect(p.colors[1]).toEqual({
+      color: "#0000ff",
+      name: "Blue",
+      dmc: "BLANC",
+      totalStitches: 1,
+      backstitchStitches: 0,
+    });
   });
 
   it("conserva DMC raros como '03' o 'BLANC'", () => {
@@ -57,14 +75,16 @@ describe("parseFlosscross", () => {
     sinSrcs.srcs = [];
     const p = parseFlosscross(JSON.stringify(sinSrcs));
     expect(p.image).toBeUndefined();
-    expect(p.totalStitches).toBe(3);
+    expect(p.totalStitches).toBe(4);
   });
 
-  it("un patrón totalmente vacío da 0 puntadas y 0 colores", () => {
+  it("un patrón totalmente vacío da 0 puntadas y 0 colores (la rejilla sigue contando)", () => {
     const vacio = structuredClone(fixture);
     vacio.model.images[0].layers[0].cross = [0, 0, 0, 0];
+    vacio.model.images[0].layers[0].backstitch = [];
     const p = parseFlosscross(JSON.stringify(vacio));
-    expect(p.totalStitches).toBe(0);
+    expect(p.totalStitches).toBe(4);
+    expect(p.crossStitches).toBe(0);
     expect(p.colors.length).toBe(0);
   });
 
@@ -87,9 +107,9 @@ if (realDir) {
       it(`importa ${name} sin romper la coherencia interna`, () => {
         const p = parseFlosscross(readFileSync(`${realDir}/${name}`, "utf8"));
         const sum = p.colors.reduce((a, c) => a + c.totalStitches, 0);
-        expect(p.totalStitches).toBe(sum);
+        expect(p.totalStitches).toBe(p.width * p.height);
+        expect(p.crossStitches).toBe(sum);
         expect(p.colors.length).toBeGreaterThan(0);
-        expect(p.width * p.height).toBeGreaterThanOrEqual(p.totalStitches);
       });
     }
   });

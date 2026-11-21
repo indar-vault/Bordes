@@ -42,11 +42,16 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .linklike { background: none; border: none; color: var(--muted); font: inherit; font-size: 12px; cursor: pointer; text-decoration: underline; }
 
 .threads { list-style: none; padding: 0; }
-.thread { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
+.thread { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
 .spool { color: var(--c, var(--accent)); font-size: 16px; }
+.thread-name { flex: 1 1 200px; }
+.thread-num { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.planned { color: var(--muted); font-size: 12px; }
 .done-tag { color: var(--done); font-weight: 700; font-size: 12px; }
 .thread.done { opacity: 0.55; }
 .replace-edit { display: inline-flex; gap: 6px; align-items: center; }
+.thread-swap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.thread-swap select { font-size: 12px; padding: 4px 6px; max-width: 190px; }
 .replace-edit input { font: inherit; padding: 4px 8px; border: 1px solid var(--ink); border-radius: 6px; }
 .usage { color: var(--muted); font-size: 12px; }
 .spools { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
@@ -64,9 +69,21 @@ input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--ink); b
 .form.inline { flex-direction: row; flex-wrap: wrap; align-items: center; }
 .form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .form h2 { margin: 6px 0 2px; font-size: 16px; }
-.colors { border-collapse: collapse; width: 100%; }
-.colors th, .colors td { padding: 4px 6px; font-size: 13px; text-align: left; }
-.colors input { padding: 4px 6px; }
+
+/* Tabla de colores: cabe dentro de la tarjeta, con columnas numericas estrechas. */
+.colors { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.colors th, .colors td { padding: 4px 4px; font-size: 13px; text-align: left; }
+.colors input, .colors select { width: 100%; min-width: 0; padding: 4px 6px; font-size: 12px; }
+.colors .col-hex { width: 32px; }
+.colors .col-name { width: 20%; }
+.colors .col-dmc { width: 10%; }
+.colors .col-spools { width: 7%; }
+.colors .col-total { width: 11%; }
+.colors .col-thread { width: 25%; }
+.colors .col-del { width: 32px; }
+.total-hint { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.chip { background: #e8d9e2; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; }
+.error { color: #9b2c2c; font-size: 13px; margin: 4px 0; }
 .thumb { max-width: 220px; border: 1px solid var(--ink); border-radius: 8px; }
 
 .backup { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 20px; }
