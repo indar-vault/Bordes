@@ -4,8 +4,9 @@ import { Project } from "./screens/Project";
 import { Session } from "./screens/Session";
 import { NewProject } from "./screens/NewProject";
 import { Threads } from "./screens/Threads";
+import { Summary } from "./screens/Summary";
 
-type View = "home" | "project" | "session" | "new" | "threads";
+type View = "home" | "project" | "session" | "new" | "threads" | "summary";
 
 /**
  * Navegación mínima de la app (sin router): Inicio → Proyecto → Sesión.
@@ -23,6 +24,10 @@ export function App() {
     setProjectId(id);
     setView("session");
   };
+  const openSummary = (id: number) => {
+    setProjectId(id);
+    setView("summary");
+  };
 
   return (
     <div class="app">
@@ -34,8 +39,9 @@ export function App() {
       {view === "home" && <Home onOpenProject={openProject} onNewProject={() => setView("new")} />}
       {view === "threads" && <Threads />}
       {view === "project" && projectId != null && (
-        <Project projectId={projectId} onStartSession={startSession} onBack={() => setView("home")} />
+        <Project projectId={projectId} onStartSession={startSession} onOpenSummary={openSummary} onBack={() => setView("home")} />
       )}
+      {view === "summary" && projectId != null && <Summary projectId={projectId} onBack={() => setView("project")} />}
       {view === "session" && projectId != null && <Session projectId={projectId} onDone={() => setView("project")} />}
       {view === "new" && <NewProject onCreated={openProject} />}
     </div>

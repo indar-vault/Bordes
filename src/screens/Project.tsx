@@ -18,10 +18,12 @@ import type { Session } from "../types";
 export function Project({
   projectId,
   onStartSession,
+  onOpenSummary,
   onBack,
 }: {
   projectId: number;
   onStartSession: (id: number) => void;
+  onOpenSummary: (id: number) => void;
   onBack: () => void;
 }) {
   const [project, setProject] = useState<Project | undefined>();
@@ -72,6 +74,7 @@ export function Project({
           {project?.giftTo && <p class="gift">Para regalar a {project.giftTo}</p>}
           <div class="row">
             <button class="btn" onClick={() => onStartSession(projectId)}>▶ Empezar sesión</button>
+            <button class="btn ghost" onClick={() => onOpenSummary(projectId)}>Ver resumen</button>
             <button class="btn ghost" onClick={toggleStatus}>
               {project?.status === "activo" ? "Marcar terminado" : "Reabrir"}
             </button>

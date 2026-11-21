@@ -29,7 +29,7 @@ async function main() {
   const fails = [];
   const check = (label, cond) => {
     console.log(`${cond ? "OK  " : "FAIL"} ${label}`);
-    if (!cond) fails.push(label);
+  if (!cond) fails.push(label);
   };
   let t = "";
 
@@ -82,6 +82,7 @@ async function main() {
   // 3. Sesión con puntadas y media
   await clickByText(page, "Empezar sesión");
   await page.waitForSelector(".counter-row");
+  await page.type(".timer input[type=number]", "45");
   await page.type(".counter-row input[type=number]", "150");
   await page.select(".media select", "serie");
   await page.waitForSelector('.media input[type="text"]');
@@ -104,6 +105,17 @@ async function main() {
   await page.waitForFunction(() => document.body.innerText.includes("Crema 752"), { timeout: 8000 });
   t = await text(page);
   check("El hilo marca a qué color teórico reemplaza", t.includes("reemplaza a “Crema 752”"));
+
+  // 4b. Resumen final del proyecto (estamos en la página de Olivia)
+  await clickByText(page, "Ver resumen");
+  await page.waitForFunction(() => document.body.innerText.includes("bordado en total") && !document.body.innerText.includes("Aún no hay sesiones"), { timeout: 8000 });
+  t = await text(page);
+  check("El resumen muestra el tiempo y las sesiones", t.includes("45 min") && t.includes("sesiones (1 días)"));
+  check("El resumen muestra el progreso de la rejilla", t.includes("150 / 3025"));
+  check("El resumen cuenta los colores y sus bobinas", t.includes("Colores") && t.includes("Pearl Gray") && t.includes("1"));
+  check("El resumen suma los episodios vistos", t.includes("2 episodios"));
+  await clickByText(page, "Volver al proyecto");
+  await page.waitForSelector(".project-head");
 
   // 5. Biblioteca global de hilos
   await clickByText(page, "Hilos");
