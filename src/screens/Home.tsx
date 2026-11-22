@@ -48,7 +48,12 @@ export function Home({
   function mini(p: Project, finished = false) {
     const done = projectStitchesDone(sessions, p.id!);
     const pct = Math.round((done / Math.max(1, p.totalStitches)) * 100);
-    const thumb = finished && p.photos?.length ? p.photos[0] : null;
+    // Miniatura de terminados: foto del proceso, foto del patrón, o la última
+    // foto de alguna sesión del proyecto.
+    const lastSessionPhoto = sessions
+      .filter((s) => s.projectId === p.id && s.photos?.length)
+      .sort((a, b) => b.date.localeCompare(a.date))[0]?.photos?.[0];
+    const thumb = finished ? p.photos?.[0] ?? p.image ?? lastSessionPhoto : null;
     return (
       <button class="mini" key={p.id} onClick={() => onOpenProject(p.id!)} title={p.name}>
         {thumb ? (

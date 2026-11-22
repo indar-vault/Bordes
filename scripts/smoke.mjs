@@ -211,6 +211,10 @@ async function main() {
   // Punto 3 (feedback): los hilos guardados se editan enteros, no solo las bobinas
   await (await threadHandle.$(".lib-edit")).click();
   await page.waitForSelector(".thread-edit-form");
+  check("Punto 3: la edición de hilos de la biblioteca tiene etiquetas", await page.evaluate(() => {
+    const labels = [...document.querySelectorAll(".thread-edit-form .tf span")].map((s) => s.textContent);
+    return labels.includes("Bobinas") && labels.includes("Color");
+  }));
   const libNameInput = await page.$('.thread-edit-form input[type="text"]');
   await libNameInput.evaluate((e) => e.select());
   await libNameInput.focus();
@@ -364,6 +368,20 @@ async function main() {
     return img && img.src.startsWith("data:image/jpeg") && img.src.length < 200000;
   }));
   check("B4: el apunte de la sesión se ve en el registro", (await text(page)).includes("cambio de hilo a mitad"));
+  // Feedback: la foto del registro se amplía al hacer clic (lightbox con X)
+  await page.evaluate(() => document.querySelector(".log .session-photos img").click());
+  await page.waitForSelector(".lightbox img");
+  const lbInfo = await page.evaluate(() => {
+    const img = document.querySelector(".lightbox img");
+    return {
+      src: img?.src.slice(0, 30),
+      w: img?.getBoundingClientRect().width,
+      css: getComputedStyle(img).maxWidth,
+    };
+  });
+  check("La foto del registro se abre en un lightbox centrado", lbInfo.src.startsWith("data:image/jpeg") && lbInfo.css !== "none");
+  await page.click(".lightbox-x");
+  check("La X cierra la foto ampliada", await page.evaluate(() => !document.querySelector(".lightbox")));
   t = await text(page);
   check("La sesión editada rehace el progreso (200 / 3025)", t.includes("200 / 3025"));
   check("El registro muestra la sesión corregida", t.includes("200 puntadas · 60 min"));

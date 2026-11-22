@@ -58,6 +58,7 @@ export function Project({
   const [notesSaved, setNotesSaved] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [mediaHist, setMediaHist] = useState<MediaSuggestion[]>([]);
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   async function refresh() {
     const p = await getProject(projectId);
@@ -159,6 +160,12 @@ export function Project({
 
   return (
     <section class="screen">
+      {lightbox && (
+        <div class="lightbox" onClick={() => setLightbox(null)}>
+          <button class="lightbox-x" aria-label="Cerrar" onClick={() => setLightbox(null)}>×</button>
+          <img src={lightbox} alt="Foto ampliada" />
+        </div>
+      )}
       <div class="project-head">
         <div class="cover" aria-hidden="true">
           {project?.image ? <img src={project.image} alt="" /> : "▢"}
@@ -256,7 +263,7 @@ export function Project({
         <div class="gallery">
           {project.photos.map((src, i) => (
             <figure class="photo">
-              <img src={src} alt={`Foto ${i + 1} del proceso`} />
+              <img src={src} alt={`Foto ${i + 1} del proceso`} onClick={() => setLightbox(src)} />
               <button
                 class="linklike"
                 onClick={async () => {
@@ -371,33 +378,38 @@ export function Project({
             </button>
             {editingThread === t.pt.id && (
               <span class="thread-edit-form">
-                <input
-                  type="text"
-                  value={threadForm.name}
-                  onChange={(e) => setThreadForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Nombre"
-                />
-                <input
-                  type="text"
-                  value={threadForm.dmc}
-                  onChange={(e) => setThreadForm((f) => ({ ...f, dmc: e.target.value }))}
-                  placeholder="DMC"
-                  style={{ width: 70 }}
-                />
-                <input
-                  type="number"
-                  value={threadForm.spools}
-                  onChange={(e) => setThreadForm((f) => ({ ...f, spools: Number(e.target.value) }))}
-                  min={0}
-                  style={{ width: 60 }}
-                />
-                <input
-                  type="number"
-                  value={threadForm.totalStitches}
-                  onChange={(e) => setThreadForm((f) => ({ ...f, totalStitches: Number(e.target.value) }))}
-                  min={0}
-                  style={{ width: 80 }}
-                />
+                <label class="tf"><span>Nombre</span>
+                  <input
+                    type="text"
+                    value={threadForm.name}
+                    onChange={(e) => setThreadForm((f) => ({ ...f, name: e.target.value }))}
+                    placeholder="Nombre"
+                  />
+                </label>
+                <label class="tf"><span>DMC</span>
+                  <input
+                    type="text"
+                    value={threadForm.dmc}
+                    onChange={(e) => setThreadForm((f) => ({ ...f, dmc: e.target.value }))}
+                    placeholder="DMC"
+                  />
+                </label>
+                <label class="tf"><span>Bobinas</span>
+                  <input
+                    type="number"
+                    value={threadForm.spools}
+                    onChange={(e) => setThreadForm((f) => ({ ...f, spools: Number(e.target.value) }))}
+                    min={0}
+                  />
+                </label>
+                <label class="tf"><span>Puntadas previstas</span>
+                  <input
+                    type="number"
+                    value={threadForm.totalStitches}
+                    onChange={(e) => setThreadForm((f) => ({ ...f, totalStitches: Number(e.target.value) }))}
+                    min={0}
+                  />
+                </label>
                 <button
                   class="btn ghost"
                   onClick={async () => {
@@ -465,7 +477,12 @@ export function Project({
                   {s.photos?.length ? (
                     <div class="session-photos">
                       {s.photos.map((src, i) => (
-                        <img key={i} src={src} alt={`Foto ${i + 1} de la sesión del ${s.date.slice(0, 10)}`} />
+                        <img
+                          key={i}
+                          src={src}
+                          alt={`Foto ${i + 1} de la sesión del ${s.date.slice(0, 10)}`}
+                          onClick={() => setLightbox(src)}
+                        />
                       ))}
                     </div>
                   ) : ""}

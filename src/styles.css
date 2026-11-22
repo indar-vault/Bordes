@@ -77,7 +77,11 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
   .heat { width: 22px; height: 22px; font-size: 12px; }
 }
 .session-photos { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
-.session-photos img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #d8d8d8; }
+.session-photos img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #d8d8d8; cursor: zoom-in; }
+.lightbox { position: fixed; inset: 0; background: rgba(20, 16, 12, 0.85); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.lightbox img { max-width: 92vw; max-height: 86vh; border-radius: 8px; }
+.lightbox-x { position: absolute; top: 10px; right: 14px; border: 0; background: rgba(255, 255, 255, 0.18); color: #fff; font-size: 22px; line-height: 1; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+.lightbox-x:hover { background: rgba(255, 255, 255, 0.3); }
 .session-notes-label { display: block; margin: 8px 0; }
 .minis { display: flex; gap: 10px; flex-wrap: wrap; }
 /* A1: búsqueda en Inicio */
@@ -114,6 +118,8 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .replace-edit { display: inline-flex; gap: 6px; align-items: center; }
 .thread-edit-form { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .thread-edit-form input { font: inherit; padding: 4px 8px; border: 1px solid var(--ink); border-radius: 6px; }
+.thread-edit-form .tf { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: #6b6b6b; }
+.thread-edit-form .tf input { min-width: 70px; }
 .thread-swap { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .thread-swap select { font-size: 12px; padding: 4px 6px; max-width: 190px; }
 .replace-edit input { font: inherit; padding: 4px 8px; border: 1px solid var(--ink); border-radius: 6px; }
@@ -148,14 +154,16 @@ input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--ink); b
 .form h2 { margin: 6px 0 2px; font-size: 16px; }
 
 /* Tabla de colores: cabe dentro de la tarjeta, con columnas numericas estrechas. */
-.colors { border-collapse: collapse; width: 100%; table-layout: auto; }
-.colors th, .colors td { padding: 4px 4px; font-size: 13px; text-align: left; }
-.colors input, .colors select { width: 100%; min-width: 0; padding: 4px 6px; font-size: 12px; }
-.colors .color-name { min-width: 120px; }
-.colors .color-dmc { min-width: 55px; }
-.colors .color-spools { min-width: 50px; }
-.colors .color-total { min-width: 60px; }
-.colors .color-thread { min-width: 140px; }
+.colors { border-collapse: collapse; width: 100%; table-layout: fixed; }
+.colors th, .colors td { padding: 4px 4px; font-size: 13px; text-align: left; overflow: hidden; }
+.colors input, .colors select { width: 100%; max-width: 100%; box-sizing: border-box; min-width: 0; padding: 4px 6px; font-size: 12px; }
+.colors .col-hex { width: 6%; }
+.colors .col-name { width: 26%; }
+.colors .col-dmc { width: 10%; }
+.colors .col-spools { width: 8%; }
+.colors .col-total { width: 10%; }
+.colors .col-thread { width: 32%; }
+.colors .col-del { width: 8%; }
 .total-hint { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
 .chip { background: #e8d9e2; border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 3px 8px; font: inherit; font-size: 12px; cursor: pointer; }
 .error { color: #9b2c2c; font-size: 13px; margin: 4px 0; }
