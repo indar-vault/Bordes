@@ -10,6 +10,7 @@ import {
   getSessions,
   insertProjectPhoto,
   listThreads,
+  mediaHistory as loadMediaHistory,
   removeProjectPhoto,
   restoreProject,
   restoreSession,
@@ -23,6 +24,8 @@ import {
 import { projectStitchesDone, sessionSpools, sessionsByDate } from "../util/progress";
 import { resizeDataUrl } from "../util/images";
 import { dmcAutoFill } from "../data/dmc";
+import type { MediaSuggestion } from "../util/media";
+import { MediaField } from "./MediaField";
 import type { Session } from "../types";
 
 export function Project({
@@ -50,6 +53,7 @@ export function Project({
   const [giftTo, setGiftTo] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
+  const [mediaHist, setMediaHist] = useState<MediaSuggestion[]>([]);
 
   async function refresh() {
     const p = await getProject(projectId);
@@ -59,6 +63,7 @@ export function Project({
     setThreads(await getProjectThreads(projectId));
     setSessions(await getSessions(projectId));
     setLibrary(await listThreads());
+    setMediaHist(await loadMediaHistory());
   }
   useEffect(() => {
     refresh();
@@ -120,6 +125,7 @@ export function Project({
   // B1: sesión rápida — minutos + puntadas por hilo + bobina gastada,
   // sin salir de la página del proyecto (reutiliza saveSession).
   const [quick, setQuick] = useState({ minutes: "", stitches: {} as Record<number, string>, spool: {} as Record<number, boolean> });
+  const [quickMedia, setQuickMedia] = useState<{ type: MediaType | ""; title: string; episodes: number }>({ type: "", title: "", episodes: 0 });
 
   async function saveQuickSession() {
     const entries: SessionEntry[] = threads
@@ -130,8 +136,16 @@ export function Project({
       }))
       .filter((e) => e.stitches > 0 || e.spoolsUsed > 0);
     if (entries.length === 0) return;
-    await saveSession({ projectId: projectId, durationMin: Math.max(0, Number(quick.minutes) || 0), entries });
+    await saveSession({
+      projectId: projectId,
+      durationMin: Math.max(0, Number(quick.minutes) || 0),
+      entries,
+      media: quickMedia.type
+        ? { type: quickMedia.type, title: quickMedia.title || undefined, episodes: quickMedia.episodes || undefined }
+        : undefined,
+    });
     setQuick({ minutes: "", stitches: {}, spool: {} });
+    setQuickMedia({ type: "", title: "", episodes: 0 });
     await refresh();
   }
 
@@ -200,6 +214,17 @@ export function Project({
             </div>
           ))}
         </div>
+        <MediaField
+          history={mediaHist}
+          type={quickMedia.type}
+          title={quickMedia.title}
+          episodes={quickMedia.episodes}
+          setType={(t) => setQuickMedia({ ...quickMedia, type: t })}
+          setTitle={(t) => setQuickMedia({ ...quickMedia, title: t })}
+          setEpisodes={(n) => setQuickMedia({ ...quickMedia, episodes: n })}
+          datalistId="media-titles-quick"
+          label="Mientras bordabas…"
+        />
         <button class="btn" type="submit">Guardar sesión rápida</button>
       </form>
 
@@ -341,6 +366,7 @@ export function Project({
                   key={s.id}
                   session={s}
                   threads={threads}
+                  history={mediaHist}
                   onSave={(durationMin, media, entries, photos, notes) => saveSessionEdit(s, durationMin, media, entries, photos, notes)}
                   onCancel={() => setEditingSession(null)}
                 />
@@ -385,11 +411,13 @@ export function Project({
 function SessionEditor({
   session,
   threads,
+  history,
   onSave,
   onCancel,
 }: {
   session: Session;
   threads: ThreadView[];
+  history: MediaSuggestion[];
   onSave: (durationMin: number, media: MediaLog | null, entries: SessionEntry[], photos: string[], notes: string) => void;
   onCancel: () => void;
 }) {
@@ -454,25 +482,17 @@ function SessionEditor({
           </div>
         );
       })}
-      <div class="media">
-        <label>
-          ¿Qué has visto?
-          <select value={mediaType} onChange={(e) => setMediaType(e.target.value as MediaType | "")}>
-            <option value="">—</option>
-            <option value="youtube">YouTube</option>
-            <option value="peli">Película</option>
-            <option value="serie">Serie</option>
-          </select>
-        </label>
-        {mediaType && (
-          <>
-            <input type="text" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} placeholder="Nombre" />
-            {mediaType === "serie" && (
-              <input type="number" value={episodes} onChange={(e) => setEpisodes(Number(e.target.value))} min={0} placeholder="Episodios" style={{ width: 80 }} />
-            )}
-          </>
-        )}
-      </div>
+      <MediaField
+        history={history}
+        type={mediaType}
+        title={mediaTitle}
+        episodes={episodes}
+        setType={setMediaType}
+        setTitle={setMediaTitle}
+        setEpisodes={setEpisodes}
+        datalistId="media-titles-edit"
+        label="¿Qué has visto?"
+      />
       <p class="hint">Total de esta sesión: <strong>{total}</strong> puntadas</p>
       <label class="session-notes-label">
         Apuntes de la sesión

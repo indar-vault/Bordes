@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { Project, MediaType } from "../types";
-import { getProject, getProjectThreads, saveSession, type ThreadView } from "../util/repo";
+import { getProject, getProjectThreads, saveSession, mediaHistory as loadMediaHistory, type ThreadView } from "../util/repo";
+import type { MediaSuggestion } from "../util/media";
+import { MediaField } from "./MediaField";
 
 export function Session({
   projectId,
@@ -20,11 +22,13 @@ export function Session({
   const [mediaTitle, setMediaTitle] = useState("");
   const [episodes, setEpisodes] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [mediaHistory, setMediaHistory] = useState<MediaSuggestion[]>([]);
   const timer = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     getProject(projectId).then(setProject);
     getProjectThreads(projectId).then(setThreads);
+    loadMediaHistory().then(setMediaHistory);
     return () => clearInterval(timer.current);
   }, [projectId]);
 
@@ -131,25 +135,16 @@ export function Session({
         <p>Total puntadas: <strong>{totalStitches}</strong></p>
       </div>
 
-      <div class="media">
-        <label>
-          ¿Qué has visto mientras bordabas?
-          <select value={mediaType} onChange={(e) => setMediaType(e.target.value as MediaType | "")}>
-            <option value="">—</option>
-            <option value="youtube">YouTube</option>
-            <option value="peli">Película</option>
-            <option value="serie">Serie</option>
-          </select>
-        </label>
-        {mediaType && (
-          <>
-            <input type="text" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} placeholder="Nombre" />
-            {mediaType === "serie" && (
-              <input type="number" value={episodes} onChange={(e) => setEpisodes(Number(e.target.value))} min={0} placeholder="Episodios" style={{ width: 80 }} />
-            )}
-          </>
-        )}
-      </div>
+      <MediaField
+        history={mediaHistory}
+        type={mediaType}
+        title={mediaTitle}
+        episodes={episodes}
+        setType={setMediaType}
+        setTitle={setMediaTitle}
+        setEpisodes={setEpisodes}
+        datalistId="media-titles-session"
+      />
 
       <button class="btn" onClick={save} disabled={saved}>Guardar sesión</button>
     </section>
