@@ -3,6 +3,7 @@ import type { AppSettings, Project, Session } from "../types";
 import { listProjects, liveSessions, getSettings, markBackup } from "../util/repo";
 import {
   episodesThisMonth,
+  heatmap,
   localDay,
   minutesThisMonth,
   projectStitchesDone,
@@ -70,6 +71,9 @@ export function Home({
     ? Math.floor((Date.now() - Date.parse(settings.lastBackupAt)) / 86400000)
     : 0;
   const backupStale = !settings?.lastBackupAt || daysSince > 14;
+
+  // B2: calendario de racha de las últimas 8 semanas.
+  const heat = heatmap(sessions, 8);
 
   async function exportJson() {
     const backup = await buildBackup();
@@ -170,6 +174,19 @@ export function Home({
               <span class="widget-num">{episodesThisMonth(sessions)}</span>
               <span class="widget-label">episodios este mes{topSeries ? ` · ${topSeries}` : ""}</span>
             </div>
+          </div>
+
+          <div class="heatmap" aria-label="Calendario de las últimas 8 semanas">
+            {heat.map((week, wi) => (
+              <div class="heat-row" key={wi}>
+                {week.map((cell) => (
+                  <span
+                    class={`heat ${cell.stitches >= 200 ? "heat-3" : cell.stitches >= 80 ? "heat-2" : cell.stitches > 0 ? "heat-1" : ""}`}
+                    title={`${cell.date}: ${cell.stitches} puntadas`}
+                  />
+                ))}
+              </div>
+            ))}
           </div>
 
           {others.length > 0 && (

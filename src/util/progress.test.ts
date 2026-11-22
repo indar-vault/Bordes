@@ -9,6 +9,7 @@ import {
   streak,
   minutesThisMonth,
   episodesThisMonth,
+  heatmap,
 } from "./progress";
 
 const s = (date: string, durationMin: number, entries: { threadId: number; stitches: number; spoolsUsed?: number }[], media?: Session["media"]): Session =>
@@ -69,5 +70,22 @@ describe("progress", () => {
     ];
     expect(minutesThisMonth(sessions, today)).toBe(105);
     expect(episodesThisMonth(sessions, today)).toBe(2);
+  });
+
+  it("B2: el heatmap cubre 8 semanas alineadas en lunes con las puntadas por día", () => {
+    const sessions = [
+      s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 300 }]),
+      s("2026-11-16T10:00:00Z", 10, [{ threadId: 1, stitches: 40 }]),
+      s("2026-09-30T10:00:00Z", 15, [{ threadId: 1, stitches: 500 }]),
+    ];
+    const grid = heatmap(sessions, 8, today); // 2026-11-20 es viernes
+    expect(grid.length).toBe(8);
+    expect(grid.every((row) => row.length === 7)).toBe(true);
+    expect(grid[0][0].date).toBe("2026-11-16"); // lunes de la semana actual
+    expect(grid[0][2].stitches).toBe(300); // miércoles 18
+    expect(grid[7][2].date).toBe("2026-09-30"); // 7 semanas antes
+    expect(grid[7][2].stitches).toBe(500);
+    const total = grid.reduce((sum, row) => sum + row.reduce((a, c) => a + c.stitches, 0), 0);
+    expect(total).toBe(840);
   });
 });

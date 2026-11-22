@@ -183,8 +183,13 @@ async function main() {
   check("Home muestra la racha 🔥 1", t.includes("🔥 1"));
   check("Home muestra los episodios del mes", t.includes("episodios este mes"));
 
-  // 6b. A1: búsqueda de proyectos en Inicio
-  await page.waitForSelector("#project-search");
+  // 6c. B2: calendario de racha (8 semanas)
+  await page.waitForSelector(".heatmap");
+  check("El heatmap tiene 56 celdas (8 semanas)", await page.evaluate(() => document.querySelectorAll(".heatmap .heat").length) === 56);
+  check("El heatmap marca los días con sesión", await page.evaluate(() => [...document.querySelectorAll(".heat")].some((c) => c.className !== "heat")));
+  check("El heatmap muestra las puntadas por día al pasar el ratón", await page.evaluate(() => [...document.querySelectorAll(".heat")].some((c) => c.title.includes("puntadas"))));
+
+  // 6b. A1: búsqueda de proyectos en Inicio  await page.waitForSelector("#project-search");
   await page.type("#project-search", "flor");
   await page.waitForFunction(
     () => document.querySelectorAll(".minis .mini").length === 1 && !document.body.innerText.includes("Olivia Rodrigo"),
@@ -276,6 +281,19 @@ async function main() {
     { timeout: 8000 }
   );
   check("Deshacer devuelve la sesión y su progreso", (await text(page)).includes("200 / 3025"));
+
+  // 7e. B1: sesión rápida desde la página del proyecto
+  await page.waitForSelector(".quick-session");
+  await page.waitForSelector(".quick-stitches");
+  await page.type(".quick-minutes", "10");
+  await page.type(".quick-stitches", "25");
+  await page.evaluate(() => document.querySelector(".quick-spool input").click());
+  await clickByText(page, "Guardar sesión rápida");
+  await page.waitForFunction(() => document.body.innerText.includes("225 / 3025"), { timeout: 8000 });
+  t = await text(page);
+  check("La sesión rápida suma sus puntadas (225 / 3025)", t.includes("225 / 3025"));
+  check("La sesión rápida aparece en el registro", t.includes("25 puntadas · 10 min"));
+  check("La sesión rápida descuenta una bobina", t.includes("2 gastadas"));
 
   // 8. Sustituir un color importado por un hilo de la biblioteca
   await clickByText(page, "Inicio");

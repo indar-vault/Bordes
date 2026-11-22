@@ -97,3 +97,39 @@ export function episodesThisMonth(sessions: Session[], today = new Date()): numb
     .filter((s) => s.date.slice(0, 7) === prefix && s.media?.type === "serie")
     .reduce((sum, s) => sum + (s.media?.episodes ?? 0), 0);
 }
+
+/** Puntadas dadas por día local (para el calendario de racha). */
+export function stitchesByDay(sessions: Session[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const s of sessions) {
+    const key = s.date.slice(0, 10);
+    map.set(key, (map.get(key) ?? 0) + sessionStitches(s));
+  }
+  return map;
+}
+
+/**
+ * B2: calendario de las últimas `weeks` semanas alineadas en lunes.
+ * grid[0] es la semana actual; cada celda { date, stitches }.
+ */
+export function heatmap(
+  sessions: Session[],
+  weeks = 8,
+  today = new Date()
+): { date: string; stitches: number }[][] {
+  const byDay = stitchesByDay(sessions);
+  const monday = new Date(today);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)); // lunes de esta semana
+  const grid: { date: string; stitches: number }[][] = [];
+  for (let w = 0; w < weeks; w++) {
+    const row: { date: string; stitches: number }[] = [];
+    for (let d = 0; d < 7; d++) {
+      const day = new Date(monday);
+      day.setDate(day.getDate() - w * 7 + d);
+      const date = localDay(day);
+      row.push({ date, stitches: byDay.get(date) ?? 0 });
+    }
+    grid.push(row);
+  }
+  return grid;
+}

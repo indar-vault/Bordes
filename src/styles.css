@@ -43,6 +43,17 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .undo-banner { background: var(--card); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; display: flex; gap: 10px; align-items: center; }
 .btn.danger { color: #b03030; border-color: #b03030; }
 .backup-reminder { background: #fdf3e3; border: 1px solid #d9a441; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+.quick-session { background: var(--card); border: 1px solid #d8d8d8; border-radius: 8px; padding: 12px; margin: 14px 0; }
+.quick-rows { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.quick-row { display: flex; align-items: center; gap: 8px; }
+.quick-row input[type=number] { width: 90px; }
+.quick-name { flex: 1; }
+.heatmap { display: grid; grid-template-columns: repeat(7, 14px); gap: 4px; margin: 12px 0; }
+.heat-row { display: contents; }
+.heat { width: 14px; height: 14px; border-radius: 3px; background: #e8e8e8; }
+.heat-1 { background: #ffd9a8; }
+.heat-2 { background: #f2a65a; }
+.heat-3 { background: #d4622a; }
 .minis { display: flex; gap: 10px; flex-wrap: wrap; }
 /* A1: búsqueda en Inicio */
 .search { margin: 10px 0 14px; }

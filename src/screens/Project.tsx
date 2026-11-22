@@ -13,6 +13,7 @@ import {
   removeProjectPhoto,
   restoreProject,
   restoreSession,
+  saveSession,
   setReplacement,
   swapProjectThread,
   updateProject,
@@ -113,6 +114,24 @@ export function Project({
     await refresh();
   }
 
+  // B1: sesión rápida — minutos + puntadas por hilo + bobina gastada,
+  // sin salir de la página del proyecto (reutiliza saveSession).
+  const [quick, setQuick] = useState({ minutes: "", stitches: {} as Record<number, string>, spool: {} as Record<number, boolean> });
+
+  async function saveQuickSession() {
+    const entries: SessionEntry[] = threads
+      .map((t) => ({
+        threadId: t.pt.threadId,
+        stitches: Number(quick.stitches[t.pt.threadId] ?? 0) || 0,
+        spoolsUsed: quick.spool[t.pt.threadId] ? 1 : 0,
+      }))
+      .filter((e) => e.stitches > 0 || e.spoolsUsed > 0);
+    if (entries.length === 0) return;
+    await saveSession({ projectId: projectId, durationMin: Math.max(0, Number(quick.minutes) || 0), entries });
+    setQuick({ minutes: "", stitches: {}, spool: {} });
+    await refresh();
+  }
+
   return (
     <section class="screen">
       <div class="project-head">
@@ -147,6 +166,39 @@ export function Project({
       </div>
 
       <div class="progress"><div class="progress-fill" style={{ width: `${pct}%` }} /></div>
+
+      <form class="quick-session" onSubmit={(e) => { e.preventDefault(); saveQuickSession(); }}>
+        <h2>Sesión rápida</h2>
+        <label>
+          Minutos
+          <input class="quick-minutes" type="number" min="0" value={quick.minutes} onChange={(e) => setQuick({ ...quick, minutes: e.target.value })} />
+        </label>
+        <div class="quick-rows">
+          {threads.map((t) => (
+            <div class="quick-row" key={t.pt.threadId}>
+              <span class="swatch" style={{ background: t.thread.color }} aria-hidden="true" />
+              <span class="quick-name">{t.thread.name}</span>
+              <input
+                class="quick-stitches"
+                type="number"
+                min="0"
+                placeholder="puntadas"
+                value={quick.stitches[t.pt.threadId] ?? ""}
+                onChange={(e) => setQuick({ ...quick, stitches: { ...quick.stitches, [t.pt.threadId]: e.target.value } })}
+              />
+              <label class="quick-spool">
+                <input
+                  type="checkbox"
+                  checked={!!quick.spool[t.pt.threadId]}
+                  onChange={(e) => setQuick({ ...quick, spool: { ...quick.spool, [t.pt.threadId]: e.target.checked } })}
+                />
+                −1 bobina
+              </label>
+            </div>
+          ))}
+        </div>
+        <button class="btn" type="submit">Guardar sesión rápida</button>
+      </form>
 
       <form class="form meta" onSubmit={saveNotes}>
         <label>
