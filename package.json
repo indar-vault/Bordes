@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "smoke": "npm run build && (vite preview --port 4173 >/dev/null 2>&1 & echo $! > /tmp/bordes-preview.pid) && sleep 3 && node scripts/smoke.mjs; kill $(cat /tmp/bordes-preview.pid) 2>/dev/null; true"
+    "smoke": "npm run build && (vite preview --port 4173 >/dev/null 2>&1 & echo $! > /tmp/bordes-preview.pid) && sleep 3 && node scripts/smoke.mjs; kill $(cat /tmp/bordes-preview.pid) 2>/dev/null; true",
+    "shots": "npm run build && (vite preview --port 4173 >/dev/null 2>&1 & echo $! > /tmp/bordes-preview.pid) && sleep 3 && node scripts/shot-v2.mjs; kill $(cat /tmp/bordes-preview.pid) 2>/dev/null; true"
   },
   "dependencies": {
     "dexie": "^4.0.8",
