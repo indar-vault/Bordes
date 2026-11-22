@@ -73,3 +73,39 @@ export function formatMinutes(min: number): string {
   const m = min % 60;
   return m ? `${h} h ${m} min` : `${h} h`;
 }
+
+/**
+ * CSV de sesiones (A2): una fila por sesión con fecha, minutos, puntadas,
+ * bobinas gastadas, media vista y detalle por hilo. Escapa comillas y comas
+ * según el estándar RFC 4180.
+ */
+export function buildSessionsCsv(project: Project, sessions: Session[], threads: ThreadView[]): string {
+  const nameOf = new Map<number, string>();
+  for (const t of threads) {
+    nameOf.set(t.thread.id!, `${t.thread.name}${t.thread.dmc ? ` (DMC ${t.thread.dmc})` : ""}`);
+  }
+  const esc = (v: string | number) => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows: (string | number)[][] = [["fecha", "minutos", "puntadas", "bobinas", "media", "hilos"]];
+  for (const s of [...sessions].sort((a, b) => a.date.localeCompare(b.date))) {
+    const hilos = s.entries
+      .map((e) => {
+        const name = nameOf.get(e.threadId) ?? `hilo ${e.threadId}`;
+        return `${name}: ${e.stitches}${e.spoolsUsed ? ` (−${e.spoolsUsed} bobina${e.spoolsUsed > 1 ? "s" : ""})` : ""}`;
+      })
+      .join("; ");
+    const media = s.media
+      ? `${s.media.type}${s.media.title ? `: ${s.media.title}` : ""}${s.media.episodes ? ` (${s.media.episodes} ep.)` : ""}`
+      : "";
+    rows.push([s.date.slice(0, 10), s.durationMin, sessionStitches(s), sessionSpools(s), media, hilos]);
+  }
+  return rows.map((r) => r.map(esc).join(",")).join("\n");
+}
+
+/** Nombre de archivo seguro para el CSV (minúsculas, sin espacios). */
+export function csvFileName(project: Project): string {
+  const slug = project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "proyecto";
+  return `bordes-sesiones-${slug}.csv`;
+}

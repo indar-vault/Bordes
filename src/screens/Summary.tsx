@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Project, Session } from "../types";
 import { getProject, getProjectThreads, getSessions, type ThreadView } from "../util/repo";
-import { computeSummary, formatMinutes } from "../util/summary";
+import { computeSummary, formatMinutes, buildSessionsCsv, csvFileName } from "../util/summary";
 
 /**
  * Resumen final de un proyecto: tiempo, sesiones, puntadas, colores y episodios.
@@ -43,6 +43,21 @@ export function Summary({
           </p>
           <div class="row">
             <button class="btn ghost" onClick={onBack}>← Volver al proyecto</button>
+            <button class="btn ghost print-btn" onClick={() => window.print()}>Imprimir</button>
+            <button
+              class="btn ghost csv-export"
+              onClick={() => {
+                const csv = buildSessionsCsv(project ?? { name: "proyecto", totalStitches: 0 } as Project, sessions, threads);
+                const blob = new Blob([csv], { type: "text/csv" });
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = csvFileName(project ?? { name: "proyecto" } as Project);
+                a.click();
+                URL.revokeObjectURL(a.href);
+              }}
+            >
+              Exportar CSV
+            </button>
           </div>
         </div>
       </div>

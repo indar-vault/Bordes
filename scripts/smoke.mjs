@@ -1,9 +1,10 @@
 // Prueba de humo end-to-end con Chromium real sobre la app servida.
 // Uso: npm run smoke   (levanta `vite preview` y abre http://localhost:4173)
 import puppeteer from "puppeteer-core";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync } from "node:fs";
 
 const URL = process.env.SMOKE_URL ?? "http://localhost:4173/";
+const DL = "/tmp/opencode/bordes-smoke-downloads";
 
 async function clickByText(page, text) {
   const ok = await page.evaluate((t) => {
@@ -128,6 +129,24 @@ async function main() {
   check("El resumen muestra el progreso de la rejilla", t.includes("150 / 3025"));
   check("El resumen cuenta los colores y sus bobinas", t.includes("Colores") && t.includes("Pearl Gray") && t.includes("Gastadas") && t.includes("1"));
   check("El resumen suma los episodios vistos", t.includes("2 episodios"));
+
+  // 4c. A2: resumen imprimible y export CSV real
+  check("El resumen tiene botones de impresión y CSV", await page.evaluate(() => !!document.querySelector(".print-btn") && !!document.querySelector(".csv-export")));
+  check("La hoja de estilos incluye reglas @media print", await page.evaluate(() => [...document.styleSheets].some((ss) => { try { return [...ss.cssRules].some((r) => r.cssText.includes("@media print")); } catch { return false; } })));
+  mkdirSync(DL, { recursive: true });
+  const before = new Set(readdirSync(DL));
+  const cdp = await page.createCDPSession();
+  await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DL });
+  await clickByText(page, "Exportar CSV");
+  let csv = "";
+  for (let i = 0; i < 40 && !csv; i++) {
+    const fresh = readdirSync(DL).filter((f) => f.endsWith(".csv") && !before.has(f));
+    if (fresh.length) csv = readFileSync(`${DL}/${fresh[0]}`, "utf8");
+    else await new Promise((r) => setTimeout(r, 250));
+  }
+  check("El CSV descargado trae cabecera, fecha, minutos y colores", csv.startsWith("fecha,minutos,puntadas,bobinas,media,hilos") && csv.includes("Pearl Gray") && csv.includes("150"));
+  check("La vista de resumen se puede imprimir", await page.evaluate(() => { try { window.print(); return true; } catch { return false; } }));
+
   await clickByText(page, "Volver al proyecto");
   await page.waitForSelector(".project-head");
 

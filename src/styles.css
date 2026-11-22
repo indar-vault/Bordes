@@ -1,6 +1,17 @@
 /* Minimalista, con guiños de hilo. La estética "dibujada a mano" llega en la Fase 6. */
 [hidden] { display: none !important; }
 
+/* A2: vista imprimible del resumen (Fase 6 hará la estética de verdad). */
+@media print {
+  body { background: #fff; }
+  .app { max-width: none; padding: 0; }
+  .nav, .backup, .search, .btn, .msg, .import { display: none !important; }
+  .widgets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .widget { border: 1px solid #bbb; }
+  .colors { border-collapse: collapse; }
+  .colors th, .colors td { border: 1px solid #ccc; padding: 4px 6px; }
+}
+
 :root {
   --ink: #3a3536;
   --paper: #f6f1ee;

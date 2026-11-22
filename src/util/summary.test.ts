@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeSummary, formatMinutes } from "./summary";
+import { computeSummary, formatMinutes, buildSessionsCsv, csvFileName } from "./summary";
 import type { Project, Session } from "../types";
 import type { ThreadView } from "./repo";
 
@@ -68,5 +68,31 @@ describe("formatMinutes", () => {
     expect(formatMinutes(60)).toBe("1 h");
     expect(formatMinutes(95)).toBe("1 h 35 min");
     expect(formatMinutes(0)).toBe("0 min");
+  });
+});
+
+describe("buildSessionsCsv (A2)", () => {
+  const viewsWithIds = views.map((v, i) => ({ ...v, thread: { ...v.thread, id: i + 1 } }));
+
+  it("una fila por sesión ordenada, con detalle de hilos y bobinas", () => {
+    const csv = buildSessionsCsv(project, sessions, viewsWithIds);
+    const lines = csv.split("\n");
+    expect(lines[0]).toBe("fecha,minutos,puntadas,bobinas,media,hilos");
+    expect(lines[1]).toBe("2026-11-19,45,40,1,serie: Friends (2 ep.),Rojo: 40 (−1 bobina)");
+    expect(lines[2]).toBe("2026-11-20,15,0,0,peli,");
+    expect(lines[3]).toBe("2026-11-20,30,10,1,youtube,Rojo: 10 (−1 bobina)");
+  });
+
+  it("escapa títulos con comas y comillas según RFC 4180", () => {
+    const csv = buildSessionsCsv(
+      project,
+      [{ projectId: 1, date: "2026-11-21T10:00:00+01:00", durationMin: 10, entries: [], media: { type: "serie", title: 'The "Crown", 1868' } }],
+      viewsWithIds
+    );
+    expect(csv.split("\n")[1]).toBe('2026-11-21,10,0,0,"serie: The ""Crown"", 1868",');
+  });
+
+  it("el nombre del archivo es un slug seguro", () => {
+    expect(csvFileName({ name: "Olivia Rodrigo!" } as Project)).toBe("bordes-sesiones-olivia-rodrigo.csv");
   });
 });
