@@ -163,6 +163,22 @@ async function main() {
   check("Home muestra la racha 🔥 1", t.includes("🔥 1"));
   check("Home muestra los episodios del mes", t.includes("episodios este mes"));
 
+  // 6b. A1: búsqueda de proyectos en Inicio
+  await page.waitForSelector("#project-search");
+  await page.type("#project-search", "flor");
+  await page.waitForFunction(
+    () => document.querySelectorAll(".minis .mini").length === 1 && !document.body.innerText.includes("Olivia Rodrigo"),
+    { timeout: 8000 }
+  );
+  t = await text(page);
+  check("La búsqueda encuentra el proyecto importado", t.includes("Flor de lis") && t.includes("resultado"));
+  check("La búsqueda oculta los proyectos que no coinciden", !t.includes("Olivia Rodrigo"));
+  await page.evaluate(() => {
+    const el = document.querySelector("#project-search");
+    el.value = "";
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
   // 7. Persistencia tras recargar
   await page.reload({ waitUntil: "networkidle0" });
   t = await text(page);
@@ -247,6 +263,23 @@ async function main() {
   t = await text(page);
   check("Al cambiar el hilo se conserva la sugerencia del patrón", t.includes("el patrón sugería “Rojo” · DMC 03"));
   check("El progreso del color se mantiene tras el cambio", t.includes("0 / 4"));
+
+  // 8b. A1: marcar terminado y sección "Terminados"
+  await clickByText(page, "Inicio");
+  await page.waitForFunction(() => document.body.innerText.includes("Olivia Rodrigo"), { timeout: 8000 });
+  await page.evaluate(() => {
+    const el = [...document.querySelectorAll(".mini, .hero-card")].find((m) => m.textContent.includes("Olivia Rodrigo"));
+    el.click();
+  });
+  await page.waitForSelector(".project-head");
+  await clickByText(page, "Marcar terminado");
+  await page.waitForFunction(() => document.body.innerText.includes("Reabrir"), { timeout: 8000 });
+  check("Al terminar el proyecto, el botón permite reabrirlo", (await text(page)).includes("Reabrir"));
+  await clickByText(page, "Inicio");
+  await page.waitForFunction(() => document.body.innerText.includes("Terminados"), { timeout: 8000 });
+  t = await text(page);
+  check("Los terminados aparecen en su propia sección", t.includes("Terminados") && t.includes("Olivia Rodrigo"));
+  check("El hero pasa a ser el proyecto activo restante", await page.evaluate(() => document.querySelector(".hero-card").textContent.includes("Flor de lis")));
 
   // 7. Offline: el service worker debe servir la app sin red
   await page.goto(URL, { waitUntil: "networkidle0" }); // deja los assets en caché
