@@ -83,10 +83,18 @@ export function Threads() {
             <span class="spool" aria-hidden="true">●</span>
             {editing === t.id ? (
               <span class="thread-edit-form">
-                <input type="color" value={editForm.color} onChange={(e) => setEditForm({ ...editForm, color: e.target.value })} />
-                <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nombre" />
-                <input type="text" value={editForm.dmc} onChange={(e) => setEditForm({ ...editForm, dmc: e.target.value, ...dmcAutoFill(editForm.name, e.target.value) })} placeholder="DMC" style={{ width: 70 }} />
-                <input type="number" value={editForm.spools} onChange={(e) => setEditForm({ ...editForm, spools: Number(e.target.value) })} min={0} style={{ width: 60 }} />
+                <label class="tf"><span>Color</span>
+                  <input type="color" value={editForm.color} onChange={(e) => setEditForm({ ...editForm, color: e.target.value })} />
+                </label>
+                <label class="tf"><span>Nombre</span>
+                  <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nombre" />
+                </label>
+                <label class="tf"><span>DMC</span>
+                  <input type="text" value={editForm.dmc} onChange={(e) => setEditForm({ ...editForm, dmc: e.target.value, ...dmcAutoFill(editForm.name, e.target.value) })} placeholder="DMC" />
+                </label>
+                <label class="tf"><span>Bobinas</span>
+                  <input type="number" value={editForm.spools} onChange={(e) => setEditForm({ ...editForm, spools: Number(e.target.value) })} min={0} />
+                </label>
                 <button class="btn ghost" onClick={() => saveThread(t)}>Guardar</button>
                 <button class="linklike" onClick={() => setEditing(null)}>cancelar</button>
               </span>
