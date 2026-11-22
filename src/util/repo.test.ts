@@ -205,6 +205,15 @@ describe("repo (IndexedDB simulado)", () => {
     expect((await getProject(id))?.finishedAt).toBeUndefined();
   });
 
+  it("los descansos por semana defaultan a 1 y se pueden cambiar", async () => {
+    expect((await getSettings()).freezeDays).toBe(1);
+    const s = await setSettings({ freezeDays: 0 });
+    expect(s.freezeDays).toBe(0);
+    expect((await getSettings()).freezeDays).toBe(0);
+    await setSettings({ freezeDays: 2 });
+    expect((await getSettings()).freezeDays).toBe(2);
+  });
+
   it("updateProjectThread permite editar las puntadas previstas de un color", async () => {
     const id = await createProject({ name: "Ed", totalStitches: 20, colors: [{ color: "#000", name: "Negro", dmc: "225", spools: 2, totalStitches: 10 }] });
     const pt = (await getProjectThreads(id))[0].pt;

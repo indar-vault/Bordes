@@ -25,8 +25,8 @@ IndexedDB del navegador, con copia de seguridad JSON exportable.
 ```bash
 npm install        # una vez
 npm run dev        # desarrollo (http://localhost:5173)
-npm run test       # tests unitarios (vitest, 66)
-npm run smoke      # build + prueba end-to-end real en Chromium (90 comprobaciones)
+npm run test       # tests unitarios (vitest, 67)
+npm run smoke      # build + prueba end-to-end real en Chromium (91 comprobaciones)
 npm run shots      # capturas de pantalla de las pantallas para revisar la UI
 ```
 

@@ -55,7 +55,7 @@ export function Settings() {
         🧊 Descansos por semana
         <select
           class="freeze-select"
-          value={settings?.freezeDays ?? 0}
+          value={settings?.freezeDays ?? 1}
           onChange={async (e) => {
             await setSettings({ freezeDays: Number(e.target.value) });
             refresh();

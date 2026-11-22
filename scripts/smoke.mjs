@@ -240,6 +240,7 @@ async function main() {
   await clickByText(page, "Configuración");
   await page.waitForSelector(".freeze-select");
   check("C2: se pueden elegir 0, 1 o 2 descansos semanales", await page.evaluate(() => document.querySelectorAll(".freeze-select option").length) === 3);
+  check("Por defecto vienen 1 descanso por semana", await page.evaluate(() => document.querySelector(".freeze-select").value === "1"));
   await page.select(".freeze-select", "1");
   check("C2: la elección de descansos se guarda", await page.waitForFunction(() => document.querySelector(".freeze-select").value === "1", { timeout: 8000 }).then(() => true));
   check("Configuración tiene exportar e importar copias", await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Exportar copia (JSON)")) && !!document.querySelector(".import input[type=file]")));

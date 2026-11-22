@@ -79,7 +79,7 @@ export function Home({
   const backupStale = !settings?.lastBackupAt || daysSince > 14;
 
   // C2: días de descanso por semana (0 = comportamiento clásico).
-  const freezeDays = settings?.freezeDays ?? 0;
+  const freezeDays = settings?.freezeDays ?? 1;
   const racha = streakInfo(sessions, new Date(), freezeDays);
   const freezesLeft = freezeLeft(sessions, freezeDays, new Date());
 

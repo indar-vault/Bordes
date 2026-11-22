@@ -115,9 +115,13 @@ export async function mediaHistory(): Promise<MediaSuggestion[]> {
   return mediaSuggestions(await liveSessions());
 }
 
-/** Ajustes globales (A4): una única fila con clave "app". */
-export async function getSettings(): Promise<AppSettings | undefined> {
-  return db.settings.get("app");
+/** Ajustes globales (A4): una única fila con clave "app". Los descansos
+ * por semana (C2) defaultan a 1; se cambian en Configuración. */
+export const DEFAULT_SETTINGS: AppSettings = { key: "app", freezeDays: 1 };
+
+export async function getSettings(): Promise<AppSettings> {
+  const s = await db.settings.get("app");
+  return s ? { ...DEFAULT_SETTINGS, ...s } : DEFAULT_SETTINGS;
 }
 
 /** Registrar que se ha exportado una copia de seguridad (A4). */
