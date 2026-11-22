@@ -97,7 +97,12 @@ async function main() {
   check("El dropdown de bobinas empieza en 1 y llega a las disponibles", spoolOpts.length === 1 && spoolOpts[0] === "1");
 
   await clickByText(page, "Guardar sesión");
-  await page.waitForSelector(".project-head");
+  // La página del proyecto se refresca con varias consultas: esperamos a que
+  // el registro esté completo antes de comprobar (evita falsos negativos).
+  await page.waitForFunction(
+    () => document.body.innerText.includes("150 / 3025") && document.body.innerText.includes("bobina gastada"),
+    { timeout: 12000 }
+  );
   t = await text(page);
   check("El progreso refleja la sesión (150 / 3025)", t.includes("150 / 3025"));
   check("Aparece la sesión en el registro", t.includes("150 puntadas"));
