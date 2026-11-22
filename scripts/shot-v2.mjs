@@ -109,6 +109,24 @@ async function main() {
   await page.screenshot({ path: `${OUT}/07-media-historial.png`, fullPage: true });
 
   // 5c. Marcar Olivia como terminado (A1: sección Terminados)
+  await page.waitForSelector(".photo-input");
+  await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 300;
+    canvas.height = 300;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff6f6";
+    ctx.fillRect(0, 0, 300, 300);
+    ctx.fillStyle = "#b0436b";
+    for (let y = 0; y < 300; y += 15) for (let x = 0; x < 300; x += 15) ctx.fillRect(x + 3, y + 3, 9, 9);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const input = document.querySelector(".photo-input");
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], "diseno.png", { type: "image/png" }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll(".gallery .photo img").length >= 1, { timeout: 10000 });
   await clickByText(page, "Marcar terminado");
   await page.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Reabrir")), { timeout: 8000 });
 
