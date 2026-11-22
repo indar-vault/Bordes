@@ -72,11 +72,20 @@ function mondayOf(d: Date): string {
   m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
   return localDay(m);
 }
-export function streak(sessions: Session[], today = new Date(), freezeDays = 0): number {
+/**
+ * Igual que `streak`, pero también devuelve qué días vacíos se "congelaron"
+ * (los que el calendario marca con ❄).
+ */
+export function streakInfo(
+  sessions: Session[],
+  today = new Date(),
+  freezeDays = 0
+): { count: number; frozen: Set<string> } {
   const days = new Set(sessions.map((s) => s.date.slice(0, 10)));
   let count = 0;
   let used = 0;
   let week = mondayOf(today);
+  const frozen = new Set<string>();
   const cursor = new Date(today);
   for (;;) {
     const key = localDay(cursor);
@@ -89,12 +98,17 @@ export function streak(sessions: Session[], today = new Date(), freezeDays = 0):
       count += 1;
     } else if (used < freezeDays) {
       used += 1; // día de descanso: no rompe la racha
+      frozen.add(key);
     } else {
       break;
     }
     cursor.setDate(cursor.getDate() - 1);
   }
-  return count;
+  return { count, frozen };
+}
+
+export function streak(sessions: Session[], today = new Date(), freezeDays = 0): number {
+  return streakInfo(sessions, today, freezeDays).count;
 }
 
 /** Minutos bordados en el mes natural actual. */
@@ -123,28 +137,62 @@ export function stitchesByDay(sessions: Session[]): Map<string, number> {
   return map;
 }
 
+/** Minutos bordados por día local. */
+export function minutesByDay(sessions: Session[]): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const s of sessions) {
+    const key = s.date.slice(0, 10);
+    map.set(key, (map.get(key) ?? 0) + s.durationMin);
+  }
+  return map;
+}
+
+export interface HeatCell {
+  date: string;
+  stitches: number;
+  minutes: number;
+  /** Día sin sesión que la racha "congeló" (C2): el calendario lo pinta con ❄. */
+  frozen: boolean;
+}
+
+/** Nivel de intensidad (0–4) de una celda según la métrica elegida. */
+export function heatLevel(cell: HeatCell, metric: "puntadas" | "minutos"): number {
+  if (metric === "minutos") {
+    const v = cell.minutes;
+    return v >= 90 ? 4 : v >= 45 ? 3 : v >= 20 ? 2 : v > 0 ? 1 : 0;
+  }
+  const v = cell.stitches;
+  return v >= 300 ? 4 : v >= 150 ? 3 : v >= 50 ? 2 : v > 0 ? 1 : 0;
+}
+
 /**
  * B2: calendario de las últimas `weeks` semanas alineadas en lunes.
- * grid[0] es la semana actual; cada celda { date, stitches }.
+ * grid[0] es la semana actual; cada celda { date, stitches, minutes, frozen }.
  */
 export function heatmap(
   sessions: Session[],
   weeks = 8,
-  today = new Date()
-): { date: string; stitches: number }[][] {
-  const byDay = stitchesByDay(sessions);
+  today = new Date(),
+  freezeDays = 0
+): HeatCell[] {
+  const byStitches = stitchesByDay(sessions);
+  const byMinutes = minutesByDay(sessions);
+  const frozen = streakInfo(sessions, today, freezeDays).frozen;
   const monday = new Date(today);
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)); // lunes de esta semana
-  const grid: { date: string; stitches: number }[][] = [];
+  const grid: HeatCell[] = [];
   for (let w = 0; w < weeks; w++) {
-    const row: { date: string; stitches: number }[] = [];
     for (let d = 0; d < 7; d++) {
       const day = new Date(monday);
       day.setDate(day.getDate() - w * 7 + d);
       const date = localDay(day);
-      row.push({ date, stitches: byDay.get(date) ?? 0 });
+      grid.push({
+        date,
+        stitches: byStitches.get(date) ?? 0,
+        minutes: byMinutes.get(date) ?? 0,
+        frozen: frozen.has(date),
+      });
     }
-    grid.push(row);
   }
   return grid;
 }

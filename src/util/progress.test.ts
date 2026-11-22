@@ -7,9 +7,11 @@ import {
   threadProgress,
   isThreadComplete,
   streak,
+  streakInfo,
   minutesThisMonth,
   episodesThisMonth,
   heatmap,
+  heatLevel,
 } from "./progress";
 
 const s = (date: string, durationMin: number, entries: { threadId: number; stitches: number; spoolsUsed?: number }[], media?: Session["media"]): Session =>
@@ -94,20 +96,49 @@ describe("progress", () => {
     expect(episodesThisMonth(sessions, today)).toBe(2);
   });
 
-  it("B2: el heatmap cubre 8 semanas alineadas en lunes con las puntadas por día", () => {
+  it("B2: el calendario cubre 8 semanas alineadas en lunes con las puntadas por día", () => {
     const sessions = [
       s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 300 }]),
       s("2026-11-16T10:00:00Z", 10, [{ threadId: 1, stitches: 40 }]),
       s("2026-09-30T10:00:00Z", 15, [{ threadId: 1, stitches: 500 }]),
     ];
     const grid = heatmap(sessions, 8, today); // 2026-11-20 es viernes
-    expect(grid.length).toBe(8);
-    expect(grid.every((row) => row.length === 7)).toBe(true);
-    expect(grid[0][0].date).toBe("2026-11-16"); // lunes de la semana actual
-    expect(grid[0][2].stitches).toBe(300); // miércoles 18
-    expect(grid[7][2].date).toBe("2026-09-30"); // 7 semanas antes
-    expect(grid[7][2].stitches).toBe(500);
-    const total = grid.reduce((sum, row) => sum + row.reduce((a, c) => a + c.stitches, 0), 0);
+    expect(grid.length).toBe(56);
+    expect(grid[0].date).toBe("2026-11-16"); // lunes de la semana actual
+    expect(grid[2].stitches).toBe(300); // miércoles 18
+    expect(grid[7 * 7 + 2].date).toBe("2026-09-30"); // 7 semanas antes
+    expect(grid[7 * 7 + 2].stitches).toBe(500);
+    const total = grid.reduce((sum, c) => sum + c.stitches, 0);
     expect(total).toBe(840);
+  });
+
+  it("el calendario acumula también los minutos por día", () => {
+    const sessions = [
+      s("2026-11-18T10:00:00Z", 45, [{ threadId: 1, stitches: 10 }]),
+      s("2026-11-18T18:00:00Z", 30, [{ threadId: 1, stitches: 5 }]),
+    ];
+    const cell = heatmap(sessions, 8, today).find((c) => c.date === "2026-11-18");
+    expect(cell?.minutes).toBe(75);
+  });
+
+  it("C2: el calendario marca con ❄ los días congelados de la racha", () => {
+    const sessions = [
+      s("2026-11-20T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
+      s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
+    ];
+    const info = streakInfo(sessions, today, 1);
+    expect(info.count).toBe(2);
+    expect(info.frozen.has("2026-11-19")).toBe(true);
+    const grid = heatmap(sessions, 8, today, 1);
+    expect(grid.some((c) => c.frozen && c.date === "2026-11-19")).toBe(true);
+    expect(grid.some((c) => c.frozen && c.date === "2026-11-17")).toBe(false); // ya agotó el descanso
+    expect(heatmap(sessions, 8, today, 0).some((c) => c.frozen)).toBe(false);
+  });
+
+  it("heatLevel traduce puntadas o minutos a 4 niveles", () => {
+    const punt = (n: number) => ({ date: "x", stitches: n, minutes: 0, frozen: false });
+    const min = (n: number) => ({ date: "x", stitches: 0, minutes: n, frozen: false });
+    expect([0, 10, 60, 200, 400].map((v) => heatLevel(punt(v), "puntadas"))).toEqual([0, 1, 2, 3, 4]);
+    expect([0, 30, 50, 100].map((v) => heatLevel(min(v), "minutos"))).toEqual([0, 2, 3, 4]);
   });
 });

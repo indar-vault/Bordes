@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import type { AppSettings, Project, Session } from "../types";
-import { listProjects, liveSessions, getSettings, markBackup, setSettings } from "../util/repo";
+import { listProjects, liveSessions, getSettings, setSettings } from "../util/repo";
 import {
   episodesThisMonth,
+  heatLevel,
   heatmap,
   localDay,
   minutesThisMonth,
   projectStitchesDone,
-  streak,
+  streakInfo,
 } from "../util/progress";
-import { buildBackup, restoreBackup } from "../util/export";
 
 export function Home({
   onOpenProject,
@@ -74,33 +74,12 @@ export function Home({
 
   // C2: días de descanso por semana (0 = comportamiento clásico).
   const freezeDays = settings?.freezeDays ?? 0;
+  const racha = streakInfo(sessions, new Date(), freezeDays);
 
-  // B2: calendario de racha de las últimas 8 semanas.
-  const heat = heatmap(sessions, 8);
-
-  async function exportJson() {
-    const backup = await buildBackup();
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `bordes-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-    await markBackup();
-    setSettings(await getSettings());
-    setMsg("Copia de seguridad descargada.");
-  }
-
-  async function importJson(file: File) {
-    try {
-      const text = await file.text();
-      const data = await restoreBackup(text);
-      await refresh();
-      setMsg(`Copia restaurada: ${data.projects.length} proyecto(s), ${data.sessions.length} sesión(es).`);
-    } catch (err) {
-      setMsg(`No se pudo restaurar: ${(err as Error).message}`);
-    }
-  }
+  // B2: calendario de racha de las últimas 12 semanas.
+  const metric = settings?.heatMetric ?? "puntadas";
+  const heat = heatmap(sessions, 12, new Date(), freezeDays);
+  const todayKey = localDay(new Date());
 
   if (projects.length === 0) {
     return (
@@ -164,19 +143,10 @@ export function Home({
 
           <div class="widgets">
             <div class="widget">
-              <span class="widget-num">🔥 {streak(sessions, new Date(), freezeDays)}</span>
-              <span class="widget-label">días de racha</span>
-            </div>
-            <div class="widget freeze-widget">
-              <label class="freeze-label">
-                🧊
-                <select class="freeze-select" value={freezeDays} onChange={async (e) => { await setSettings({ freezeDays: Number(e.target.value) }); refresh(); }} aria-label="Días de descanso por semana">
-                  <option value="0">0 descansos</option>
-                  <option value="1">1 descanso</option>
-                  <option value="2">2 descansos</option>
-                </select>
-              </label>
-              <span class="widget-label">por semana</span>
+              <span class="widget-num">🔥 {racha.count}</span>
+              <span class="widget-label">
+                días de racha{racha.frozen.size > 0 ? ` · 🧊 ${racha.frozen.size} congelados` : ""}
+              </span>
             </div>
             <div class="widget">
               <span class="widget-num">
@@ -190,17 +160,57 @@ export function Home({
             </div>
           </div>
 
-          <div class="heatmap" aria-label="Calendario de las últimas 8 semanas">
-            {heat.map((week, wi) => (
-              <div class="heat-row" key={wi}>
-                {week.map((cell) => (
-                  <span
-                    class={`heat ${cell.stitches >= 200 ? "heat-3" : cell.stitches >= 80 ? "heat-2" : cell.stitches > 0 ? "heat-1" : ""}`}
-                    title={`${cell.date}: ${cell.stitches} puntadas`}
-                  />
-                ))}
-              </div>
-            ))}
+          <div class="calendar">
+            <div class="calendar-head">
+              <h2>Calendario de racha</h2>
+              <label class="metric">
+                color según
+                <select
+                  class="metric-select"
+                  value={metric}
+                  onChange={async (e) => {
+                    await setSettings({ heatMetric: e.target.value as "puntadas" | "minutos" });
+                    refresh();
+                  }}
+                  aria-label="Métrica de color del calendario"
+                >
+                  <option value="puntadas">puntadas</option>
+                  <option value="minutos">minutos</option>
+                </select>
+              </label>
+            </div>
+            <div class="heatmap" aria-label="Calendario de las últimas 12 semanas">
+              {["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"].map((label, di) => (
+                <div class="heat-row" key={label}>
+                  <span class="heat-day">{label}</span>
+                  {heat.filter((c, i) => i % 7 === di).reverse().map((cell) => {
+                    const level = heatLevel(cell, metric);
+                    const future = cell.date > todayKey;
+                    const cls = cell.frozen
+                      ? "heat heat-frozen"
+                      : future
+                        ? "heat heat-future"
+                        : level > 0
+                          ? `heat heat-${level}`
+                          : "heat heat-empty";
+                    const glyph = cell.frozen ? "❄" : future ? "" : level === 0 ? "✗" : "";
+                    const title = future
+                      ? `${cell.date}: todavía no ha llegado`
+                      : `${cell.date}: ${metric === "minutos" ? `${cell.minutes} min` : `${cell.stitches} puntadas`}${cell.frozen ? " · día congelado" : ""}`;
+                    return <span class={cls} title={title}>{glyph}</span>;
+                  })}
+                </div>
+              ))}
+            </div>
+            <div class="heat-legend">
+              <span class="heat heat-1" aria-hidden="true"></span>
+              <span class="heat heat-2" aria-hidden="true"></span>
+              <span class="heat heat-3" aria-hidden="true"></span>
+              <span class="heat heat-4" aria-hidden="true"></span>
+              <span>de menos a más {metric}</span>
+              <span class="heat heat-empty">✗</span> sin sesión
+              <span class="heat heat-frozen">❄</span> día congelado
+            </div>
           </div>
 
           {others.length > 0 && (
@@ -221,11 +231,6 @@ export function Home({
 
       <div class="backup">
         <button class="btn ghost" onClick={onNewProject}>+ Nuevo proyecto</button>
-        <button class="btn ghost" onClick={exportJson}>Exportar copia (JSON)</button>
-        <label class="import">
-          Importar copia
-          <input type="file" accept="application/json" onChange={(e) => e.target.files && importJson(e.target.files[0])} />
-        </label>
       </div>
       {backupStale && (
         <p class="backup-reminder">

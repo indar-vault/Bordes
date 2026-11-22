@@ -48,16 +48,31 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .quick-row { display: flex; align-items: center; gap: 8px; }
 .quick-row input[type=number] { width: 90px; }
 .quick-name { flex: 1; }
-.heatmap { display: grid; grid-template-columns: repeat(7, 14px); gap: 4px; margin: 12px 0; }
+/* B2, rediseñado: calendario horizontal tipo Anki. Filas = días de la semana,
+   columnas = semanas (la actual a la derecha). 4 niveles de intensidad, ✗ si
+   no hubo sesión y ❄ si la racha congeló ese día. */
+.calendar { margin: 16px 0; }
+.calendar-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.calendar-head h2 { margin: 0; font-size: 15px; }
+.metric { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.metric select { font-size: 13px; padding: 4px 8px; }
+.heatmap { display: grid; grid-template-columns: 30px repeat(12, 30px); gap: 5px; margin-top: 10px; }
 .heat-row { display: contents; }
-.heat { width: 14px; height: 14px; border-radius: 3px; background: #e8e8e8; }
-.heat-1 { background: #ffd9a8; }
-.heat-2 { background: #f2a65a; }
-.heat-3 { background: #d4622a; }
+.heat-day { font-size: 11px; color: var(--muted); display: grid; place-items: center; }
+.heat { width: 30px; height: 30px; border-radius: 6px; background: #f0ece7; display: grid; place-items: center; font-size: 15px; line-height: 1; }
+.heat-empty { background: #f0ece7; color: #7d746e; border: 1px solid #d3c9c2; }
+.heat-future { background: #faf7f4; }
+.heat-1 { background: #eab3c2; }
+.heat-2 { background: #d67d97; }
+.heat-3 { background: #a94c71; }
+.heat-4 { background: #6d3b5b; }
+.heat-frozen { background: #cfe4ee; color: #2c6b86; border: 1px solid #9fbcd0; }
+.heat-legend { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.heat-legend .heat { width: 18px; height: 18px; font-size: 11px; }
+.freeze-label { display: flex; gap: 8px; align-items: center; margin: 8px 0 14px; }
 .session-photos { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .session-photos img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #d8d8d8; }
 .session-notes-label { display: block; margin: 8px 0; }
-.freeze-widget select { font: inherit; }
 .minis { display: flex; gap: 10px; flex-wrap: wrap; }
 /* A1: búsqueda en Inicio */
 .search { margin: 10px 0 14px; }

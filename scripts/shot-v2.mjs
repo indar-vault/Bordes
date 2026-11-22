@@ -117,11 +117,16 @@ async function main() {
   await page.waitForSelector(".print-btn");
   await page.screenshot({ path: `${OUT}/05-resumen.png`, fullPage: true });
 
-  // 7. Terminado + Inicio con heatmap, búsqueda y recordatorio (A1, B2, C2)
-  await clickByText(page, "Inicio");
-  await page.waitForSelector(".widgets");
+  // 7. Configuración (descansos + copias de seguridad)
+  await clickByText(page, "Configuración");
   await page.waitForSelector(".freeze-select");
   await page.select(".freeze-select", "1");
+  await page.waitForFunction(() => document.querySelector(".freeze-select").value === "1", { timeout: 8000 });
+  await page.screenshot({ path: `${OUT}/08-configuracion.png`, fullPage: true });
+
+  // 8. Inicio con el calendario horizontal (A1, B2, C2)
+  await clickByText(page, "Inicio");
+  await page.waitForSelector(".heatmap");
   await page.evaluate(() => document.querySelector("#project-search").value);
   await page.screenshot({ path: `${OUT}/06-inicio.png`, fullPage: true });
 
