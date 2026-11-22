@@ -12,6 +12,20 @@ export function projectStitchesDone(sessions: Session[], projectId: number): num
     .reduce((sum, s) => sum + sessionStitches(s), 0);
 }
 
+/** Bobinas gastadas en una sesión (suma de entradas por color). */
+export function sessionSpools(session: Session): number {
+  return session.entries.reduce((sum, e) => sum + (e.spoolsUsed ?? 0), 0);
+}
+
+/** Bobinas gastadas de un hilo, derivadas de todas las sesiones pasadas. */
+export function threadSpoolsUsed(sessions: Session[], threadId: number): number {
+  return sessions.reduce(
+    (sum, s) =>
+      sum + s.entries.filter((e) => e.threadId === threadId).reduce((a, e) => a + (e.spoolsUsed ?? 0), 0),
+    0
+  );
+}
+
 /** Sesiones agrupadas por día, más reciente primero. */
 export function sessionsByDate(sessions: Session[]): { date: string; sessions: Session[] }[] {
   const map = new Map<string, Session[]>();

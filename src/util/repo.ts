@@ -1,6 +1,6 @@
 import { db } from "../db";
 import type { MediaLog, Project, ProjectThread, Session, SessionEntry, Thread } from "../types";
-import { isThreadComplete, threadProgress } from "./progress";
+import { isThreadComplete, threadProgress, threadSpoolsUsed } from "./progress";
 
 /**
  * Fecha/hora en hora LOCAL con su desfase (p. ej. "2026-11-20T09:30:00+01:00").
@@ -122,17 +122,31 @@ export interface ThreadView {
   thread: Thread;
   done: number;
   complete: boolean;
+  /** Bobinas gastadas por este hilo (en cualquier proyecto), derivadas de las sesiones. */
+  spoolsUsed: number;
+  /** Bobinas que quedan: las registradas menos las gastadas. */
+  spoolsLeft: number;
 }
 
 export async function getProjectThreads(projectId: number): Promise<ThreadView[]> {
   const pts = await db.projectThreads.where({ projectId }).sortBy("order");
   const sessions = await db.sessions.where({ projectId }).toArray();
+  // El gasto de bobinas es global: un mismo hilo puede gastarse en varios proyectos.
+  const allSessions = await db.sessions.toArray();
   const views: ThreadView[] = [];
   for (const pt of pts) {
     const thread = await db.threads.get(pt.threadId);
     if (!thread) continue;
     const done = threadProgress(sessions, pt.threadId);
-    views.push({ pt, thread, done, complete: isThreadComplete(sessions, pt) });
+    const spoolsUsed = threadSpoolsUsed(allSessions, pt.threadId);
+    views.push({
+      pt,
+      thread,
+      done,
+      complete: isThreadComplete(sessions, pt),
+      spoolsUsed,
+      spoolsLeft: Math.max(0, (thread.spools ?? 0) - spoolsUsed),
+    });
   }
   // Los completados bajan al final (menor prioridad), como pide el ticket.
   return views.sort((a, b) => Number(a.complete) - Number(b.complete) || a.pt.order - b.pt.order);
@@ -172,7 +186,9 @@ export async function saveSession(input: {
     projectId: input.projectId,
     date: input.date ?? localISO(),
     durationMin: Math.max(0, Math.round(input.durationMin)),
-    entries: input.entries.filter((e) => e.stitches > 0),
+    entries: input.entries
+      .map((e) => ({ threadId: e.threadId, stitches: e.stitches, spoolsUsed: Math.max(0, Math.round(e.spoolsUsed ?? 0)) }))
+      .filter((e) => e.stitches > 0 || e.spoolsUsed > 0),
     media: input.media && (input.media.type || input.media.title) ? input.media : undefined,
   };
   await db.sessions.add(session);
@@ -223,8 +239,10 @@ export async function swapProjectThread(ptId: number, threadId: number): Promise
     for (const e of s.entries) {
       const tid = e.threadId === pt.threadId ? threadId : e.threadId;
       const dup = merged.find((m) => m.threadId === tid);
-      if (dup) dup.stitches += e.stitches;
-      else merged.push({ threadId: tid, stitches: e.stitches });
+      if (dup) {
+        dup.stitches += e.stitches;
+        dup.spoolsUsed = (dup.spoolsUsed ?? 0) + (e.spoolsUsed ?? 0);
+      } else merged.push({ threadId: tid, stitches: e.stitches, spoolsUsed: e.spoolsUsed });
     }
     await db.sessions.update(s.id!, { entries: merged });
   }

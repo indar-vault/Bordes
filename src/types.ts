@@ -45,6 +45,8 @@ export interface Project {
 export interface SessionEntry {
   threadId: number;
   stitches: number;
+  /** Bobinas gastadas en esta sesión, introducidas a mano (decisión #11). */
+  spoolsUsed?: number;
 }
 
 export interface Session {

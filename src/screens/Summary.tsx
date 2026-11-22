@@ -62,7 +62,7 @@ export function Summary({
         </div>
         <div class="widget">
           <span class="widget-num">{s.colorsDone} / {s.colors}</span>
-          <span class="widget-label">colores completados · {s.spools} {s.spools === 1 ? "bobina" : "bobinas"}</span>
+          <span class="widget-label">colores completados · {s.spoolsUsed > 0 ? `${s.spoolsUsed} ${s.spoolsUsed === 1 ? "bobina gastada" : "bobinas gastadas"}` : `${s.spools} ${s.spools === 1 ? "bobina" : "bobinas"}`}</span>
         </div>
       </div>
 
@@ -83,6 +83,7 @@ export function Summary({
             <th class="col-total">Previstas</th>
             <th class="col-total">Bordadas</th>
             <th class="col-spools">Bobinas</th>
+            <th class="col-spools">Gastadas</th>
           </tr>
         </thead>
         <tbody>
@@ -94,6 +95,7 @@ export function Summary({
               <td class="col-total">{t.pt.totalStitches}</td>
               <td class="col-total">{t.done}</td>
               <td class="col-spools">{t.thread.spools}</td>
+              <td class="col-spools">{t.spoolsUsed}</td>
             </tr>
           ))}
         </tbody>

@@ -62,6 +62,8 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .timer, .counter, .media { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .counter { flex-direction: column; align-items: stretch; }
 .counter-row { display: flex; align-items: center; gap: 10px; }
+.spool-used { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.spool-used select { font: inherit; width: 60px; }
 .timer-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
 input, select { font: inherit; padding: 6px 8px; border: 1px solid var(--ink); border-radius: 6px; background: #fff; }
 

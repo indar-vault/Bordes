@@ -1,6 +1,6 @@
 import type { Project, Session } from "../types";
 import type { ThreadView } from "./repo";
-import { sessionStitches } from "./progress";
+import { sessionSpools, sessionStitches } from "./progress";
 
 /**
  * Cifras del resumen final de un proyecto. Todo se deriva de las sesiones
@@ -20,6 +20,7 @@ export interface SummaryData {
   colors: number;
   colorsDone: number;
   spools: number; // bobinas de la biblioteca para los hilos de este proyecto
+  spoolsUsed: number; // bobinas gastadas, derivadas de las sesiones
   episodes: number;
   movies: number;
   youtube: number;
@@ -32,6 +33,7 @@ export function computeSummary(project: Project, sessions: Session[], threads: T
 
   const plannedStitches = threads.reduce((sum, t) => sum + t.pt.totalStitches, 0);
   const stitchesDone = sessions.reduce((sum, s) => sum + sessionStitches(s), 0);
+  const spoolsUsed = sessions.reduce((sum, s) => sum + sessionSpools(s), 0);
 
   let episodes = 0;
   let movies = 0;
@@ -57,6 +59,7 @@ export function computeSummary(project: Project, sessions: Session[], threads: T
     colors: threads.length,
     colorsDone: threads.filter((t) => t.complete).length,
     spools: threads.reduce((sum, t) => sum + (t.thread.spools ?? 0), 0),
+    spoolsUsed,
     episodes,
     movies,
     youtube,

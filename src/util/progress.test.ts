@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import type { Session } from "../types";
 import {
   sessionStitches,
+  sessionSpools,
+  threadSpoolsUsed,
   threadProgress,
   isThreadComplete,
   streak,
@@ -9,7 +11,7 @@ import {
   episodesThisMonth,
 } from "./progress";
 
-const s = (date: string, durationMin: number, entries: { threadId: number; stitches: number }[], media?: Session["media"]): Session =>
+const s = (date: string, durationMin: number, entries: { threadId: number; stitches: number; spoolsUsed?: number }[], media?: Session["media"]): Session =>
   ({ projectId: 1, date, durationMin, entries, media });
 
 const today = new Date("2026-11-20T12:00:00Z");
@@ -26,6 +28,17 @@ describe("progress", () => {
     ];
     expect(threadProgress(sessions, 1)).toBe(700);
     expect(threadProgress(sessions, 2)).toBe(12);
+  });
+
+  it("suma las bobinas gastadas de una sesión y de un hilo", () => {
+    expect(sessionSpools(s("2026-11-20T10:00:00Z", 30, [{ threadId: 1, stitches: 100, spoolsUsed: 1 }, { threadId: 2, stitches: 50 }]))).toBe(1);
+    const sessions = [
+      s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 300, spoolsUsed: 2 }]),
+      s("2026-11-19T10:00:00Z", 25, [{ threadId: 1, stitches: 400, spoolsUsed: 1 }, { threadId: 2, stitches: 12, spoolsUsed: 1 }]),
+    ];
+    expect(threadSpoolsUsed(sessions, 1)).toBe(3);
+    expect(threadSpoolsUsed(sessions, 2)).toBe(1);
+    expect(threadSpoolsUsed(sessions, 3)).toBe(0);
   });
 
   it("marca un hilo como completado al llegar al total", () => {

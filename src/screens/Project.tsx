@@ -12,7 +12,7 @@ import {
   updateProject,
   type ThreadView,
 } from "../util/repo";
-import { projectStitchesDone, sessionsByDate } from "../util/progress";
+import { projectStitchesDone, sessionSpools, sessionsByDate } from "../util/progress";
 import type { Session } from "../types";
 
 export function Project({
@@ -95,7 +95,7 @@ export function Project({
           >
             <span class="spool" aria-hidden="true">●</span>
             <span class="thread-name">
-              {t.thread.name} <small>DMC {t.thread.dmc || "—"} · {t.thread.spools} {t.thread.spools === 1 ? "bobina" : "bobinas"}</small>
+              {t.thread.name} <small>DMC {t.thread.dmc || "—"} · {t.spoolsLeft} {t.spoolsLeft === 1 ? "bobina" : "bobinas"}{t.spoolsUsed > 0 ? ` · ${t.spoolsUsed} gast${t.spoolsUsed === 1 ? "ada" : "adas"}` : ""}</small>
               {t.pt.plannedName && t.pt.plannedName !== t.thread.name && (
                 <small class="planned">
                   (el patrón sugería “{t.pt.plannedName}”{t.pt.plannedDmc ? ` · DMC ${t.pt.plannedDmc}` : ""})
@@ -173,6 +173,7 @@ export function Project({
             {group.sessions.map((s) => (
               <p key={s.id}>
                 {s.entries.reduce((a, e) => a + e.stitches, 0)} puntadas · {s.durationMin} min
+                {sessionSpools(s) > 0 ? ` · ${sessionSpools(s)} ${sessionSpools(s) === 1 ? "bobina gastada" : "bobinas gastadas"}` : ""}
                 {s.media ? ` · ${s.media.type}${s.media.title ? ": " + s.media.title : ""}${s.media.episodes ? ` (${s.media.episodes} eps)` : ""}` : ""}
                 <button class="linklike" onClick={async () => { await deleteSession(s.id!); await refresh(); }}>borrar</button>
               </p>

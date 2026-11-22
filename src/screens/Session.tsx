@@ -15,6 +15,7 @@ export function Session({
   const [elapsed, setElapsed] = useState(0);
   const [manualMin, setManualMin] = useState(0);
   const [stitches, setStitches] = useState<Record<number, number>>({});
+  const [spoolsUsed, setSpoolsUsed] = useState<Record<number, number>>({});
   const [mediaType, setMediaType] = useState<MediaType | "">("");
   const [mediaTitle, setMediaTitle] = useState("");
   const [episodes, setEpisodes] = useState(0);
@@ -46,7 +47,11 @@ export function Session({
       durationMin,
       entries: threads
         .filter((t) => t.pt.threadId)
-        .map((t) => ({ threadId: t.pt.threadId, stitches: stitches[t.pt.threadId] ?? 0 })),
+        .map((t) => ({
+          threadId: t.pt.threadId,
+          stitches: stitches[t.pt.threadId] ?? 0,
+          spoolsUsed: spoolsUsed[t.pt.threadId] ?? 0,
+        })),
       media: mediaType ? { type: mediaType, title: mediaTitle || undefined, episodes: episodes || undefined } : undefined,
     });
     setSaved(true);
@@ -91,6 +96,35 @@ export function Session({
               min={0}
             />
             <small>{t.done} / {t.pt.totalStitches}</small>
+            {t.spoolsLeft > 0 && (
+              <label class="spool-used">
+                <input
+                  type="checkbox"
+                  checked={(spoolsUsed[t.pt.threadId] ?? 0) > 0}
+                  onChange={(e) =>
+                    setSpoolsUsed((s) => ({
+                      ...s,
+                      [t.pt.threadId]: e.target.checked ? 1 : 0,
+                    }))
+                  }
+                />
+                <span>¿Se ha gastado alguna bobina?</span>
+                {(spoolsUsed[t.pt.threadId] ?? 0) > 0 && (
+                  <select
+                    value={spoolsUsed[t.pt.threadId] ?? 1}
+                    onChange={(e) =>
+                      setSpoolsUsed((s) => ({ ...s, [t.pt.threadId]: Number(e.target.value) }))
+                    }
+                  >
+                    {Array.from({ length: t.spoolsLeft }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </label>
+            )}
             {t.complete && <span class="done-tag">Completado</span>}
           </div>
         ))}

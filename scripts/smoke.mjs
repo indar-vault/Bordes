@@ -89,11 +89,20 @@ async function main() {
   await page.type('.media input[type="text"]', "Friends");
   await page.type('.media input[type="number"]', "2");
 
+  // Consumo manual de bobinas: checkbox + dropdown 1..bobinas disponibles
+  await page.waitForSelector(".spool-used input[type=checkbox]");
+  await page.evaluate(() => document.querySelector(".spool-used input[type=checkbox]").click());
+  await page.waitForSelector(".spool-used select");
+  const spoolOpts = await page.evaluate(() => [...document.querySelectorAll(".spool-used select option")].map((o) => o.value));
+  check("El dropdown de bobinas empieza en 1 y llega a las disponibles", spoolOpts.length === 1 && spoolOpts[0] === "1");
+
   await clickByText(page, "Guardar sesión");
   await page.waitForSelector(".project-head");
   t = await text(page);
   check("El progreso refleja la sesión (150 / 3025)", t.includes("150 / 3025"));
   check("Aparece la sesión en el registro", t.includes("150 puntadas"));
+  check("El registro refleja la bobina gastada", t.includes("1 bobina gastada"));
+  check("El proyecto muestra las bobinas restantes y las gastadas", t.includes("0 bobinas") && t.includes("1 gastada"));
   check("Se registra la serie vista", t.includes("Friends"));
 
   // 4. Toggle de reemplazo del hilo teórico (estamos en la página del proyecto)
@@ -112,7 +121,7 @@ async function main() {
   t = await text(page);
   check("El resumen muestra el tiempo y las sesiones", t.includes("45 min") && t.includes("sesión (1 día)"));
   check("El resumen muestra el progreso de la rejilla", t.includes("150 / 3025"));
-  check("El resumen cuenta los colores y sus bobinas", t.includes("Colores") && t.includes("Pearl Gray") && t.includes("1"));
+  check("El resumen cuenta los colores y sus bobinas", t.includes("Colores") && t.includes("Pearl Gray") && t.includes("Gastadas") && t.includes("1"));
   check("El resumen suma los episodios vistos", t.includes("2 episodios"));
   await clickByText(page, "Volver al proyecto");
   await page.waitForSelector(".project-head");
@@ -156,9 +165,9 @@ async function main() {
   check("El proyecto importado también persiste", t.includes("Flor de lis"));
   await page.click(".hero-card");
   await page.waitForSelector(".project-head");
-  await page.waitForFunction(() => document.body.innerText.includes("3 bobinas"), { timeout: 8000 });
+  await page.waitForFunction(() => document.body.innerText.includes("2 bobinas") && document.body.innerText.includes("1 gastada"), { timeout: 8000 });
   t = await text(page);
-  check("El proyecto refleja las 3 bobinas editadas", t.includes("3 bobinas"));
+  check("El proyecto refleja las bobinas editadas menos la gastada", t.includes("2 bobinas") && t.includes("1 gastada"));
   check("El reemplazo sobrevive a la recarga", t.includes("Crema 752"));
 
   // 8. Sustituir un color importado por un hilo de la biblioteca

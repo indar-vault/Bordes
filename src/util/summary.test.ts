@@ -23,9 +23,9 @@ const views: ThreadView[] = [
 ];
 
 const sessions: Session[] = [
-  { projectId: 1, date: "2026-11-19T20:10:00+01:00", durationMin: 45, entries: [{ threadId: 1, stitches: 40 }], media: { type: "serie", title: "Friends", episodes: 2 } },
+  { projectId: 1, date: "2026-11-19T20:10:00+01:00", durationMin: 45, entries: [{ threadId: 1, stitches: 40, spoolsUsed: 1 }], media: { type: "serie", title: "Friends", episodes: 2 } },
   { projectId: 1, date: "2026-11-20T09:00:00+01:00", durationMin: 15, entries: [], media: { type: "peli" } },
-  { projectId: 1, date: "2026-11-20T21:00:00+01:00", durationMin: 30, entries: [{ threadId: 1, stitches: 10 }], media: { type: "youtube" } },
+  { projectId: 1, date: "2026-11-20T21:00:00+01:00", durationMin: 30, entries: [{ threadId: 1, stitches: 10, spoolsUsed: 1 }], media: { type: "youtube" } },
 ];
 
 describe("computeSummary", () => {
@@ -41,6 +41,7 @@ describe("computeSummary", () => {
     expect(s.colors).toBe(2);
     expect(s.colorsDone).toBe(1);
     expect(s.spools).toBe(3);
+    expect(s.spoolsUsed).toBe(2);
     expect(s.firstDate).toBe("2026-11-19");
     expect(s.lastDate).toBe("2026-11-20");
   });

@@ -61,6 +61,16 @@ describe("repo (IndexedDB simulado)", () => {
     expect(session.entries).toHaveLength(0);
   });
 
+  it("registra el gasto manual de bobinas y lo deriva de las sesiones", async () => {
+    const id = await createProject({ name: "Bobinas", totalStitches: 100, colors: [{ color: "#333", name: "Verde", spools: 3, totalStitches: 100 }] });
+    const tid = (await getProjectThreads(id))[0].pt.threadId;
+    await saveSession({ projectId: id, durationMin: 10, entries: [{ threadId: tid, stitches: 50, spoolsUsed: 1 }] });
+    await saveSession({ projectId: id, durationMin: 10, entries: [{ threadId: tid, stitches: 0, spoolsUsed: 2 }] });
+    const view = (await getProjectThreads(id))[0];
+    expect(view.spoolsUsed).toBe(3);
+    expect(view.spoolsLeft).toBe(0);
+  });
+
   it("actualiza la fecha del proyecto al guardar una sesión (para la home)", async () => {
     const id = await createProject({ name: "Osito", totalStitches: 100, colors: [] });
     const before = (await getProject(id))!.updatedAt;
