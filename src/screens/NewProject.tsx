@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createProject, listThreads, findThreadMatch, type NewColorInput } from "../util/repo";
 import { parseFlosscross } from "../util/flosscross";
 import { resizeDataUrl } from "../util/images";
+import { dmcAutoFill } from "../data/dmc";
 import type { Thread } from "../types";
 
 /**
@@ -166,7 +167,16 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
               <tr key={i}>
                 <td><input class="color-hex" type="color" value={c.color} onChange={(e) => setColor(i, { color: e.target.value })} /></td>
                 <td><input class="color-name" type="text" value={c.name} onChange={(e) => setColor(i, { name: e.target.value })} /></td>
-                <td><input class="color-dmc" type="text" value={c.dmc ?? ""} onChange={(e) => setColor(i, { dmc: e.target.value })} /></td>
+                <td>
+                  <input
+                    class="color-dmc"
+                    type="text"
+                    value={c.dmc ?? ""}
+                    onChange={(e) => {
+                      setColor(i, { dmc: e.target.value, ...dmcAutoFill(c.name, e.target.value) });
+                    }}
+                  />
+                </td>
                 <td><input class="color-spools" type="number" value={c.spools ?? 1} onChange={(e) => setColor(i, { spools: Number(e.target.value) })} min={0} max={99} /></td>
                 <td><input class="color-total" type="number" value={c.totalStitches} onChange={(e) => setColor(i, { totalStitches: Number(e.target.value) })} min={0} max={9999} /></td>
                 <td>

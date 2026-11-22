@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { db } from "../db";
 import type { Thread } from "../types";
 import { findThreadMatch, listThreads, threadUsage, updateThread } from "../util/repo";
+import { dmcAutoFill } from "../data/dmc";
 
 /**
  * Biblioteca global de hilos: color, nombre, DMC y bobinas disponibles.
@@ -56,7 +57,7 @@ export function Threads() {
       <form class="form inline" onSubmit={addThread}>
         <input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} />
         <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre del hilo" />
-        <input type="text" value={form.dmc} onChange={(e) => setForm({ ...form, dmc: e.target.value })} placeholder="DMC" style={{ width: 70 }} />
+        <input class="thread-dmc" type="text" value={form.dmc} onChange={(e) => setForm({ ...form, dmc: e.target.value, ...dmcAutoFill(form.name, e.target.value) })} placeholder="DMC" style={{ width: 70 }} />
         <input type="number" value={form.spools} onChange={(e) => setForm({ ...form, spools: Number(e.target.value) })} min={0} style={{ width: 60 }} />
         <button class="btn ghost" type="submit">+ Añadir hilo</button>
       </form>

@@ -22,6 +22,7 @@ import {
 } from "../util/repo";
 import { projectStitchesDone, sessionSpools, sessionsByDate } from "../util/progress";
 import { resizeDataUrl } from "../util/images";
+import { dmcAutoFill } from "../data/dmc";
 import type { Session } from "../types";
 
 export function Project({
@@ -322,7 +323,7 @@ export function Project({
       <form class="form inline" onSubmit={addColor}>
         <input type="color" value={newColor.color} onChange={(e) => setNewColor({ ...newColor, color: e.target.value })} />
         <input type="text" value={newColor.name} onChange={(e) => setNewColor({ ...newColor, name: e.target.value })} placeholder="Nuevo color" />
-        <input type="text" value={newColor.dmc} onChange={(e) => setNewColor({ ...newColor, dmc: e.target.value })} placeholder="DMC" style={{ width: 70 }} />
+        <input class="new-color-dmc" type="text" value={newColor.dmc} onChange={(e) => setNewColor({ ...newColor, dmc: e.target.value, ...dmcAutoFill(newColor.name, e.target.value) })} placeholder="DMC" style={{ width: 70 }} />
         <input type="number" value={newColor.spools} onChange={(e) => setNewColor({ ...newColor, spools: Number(e.target.value) })} min={0} style={{ width: 60 }} />
         <input type="number" value={newColor.totalStitches} onChange={(e) => setNewColor({ ...newColor, totalStitches: Number(e.target.value) })} min={0} style={{ width: 80 }} />
         <button class="btn ghost" type="submit">+ Añadir hilo</button>

@@ -74,6 +74,24 @@ async function main() {
   await page.type("#project-total", "3025");
   await page.type(".color-total", "2615");
 
+  // 3b. C1: al escribir un código DMC se autocompletan nombre y color
+  const dmcEl = await page.$(".color-dmc");
+  await dmcEl.evaluate((e) => e.select());
+  await dmcEl.focus();
+  await page.keyboard.press("Backspace");
+  await page.waitForFunction(() => document.querySelector(".color-dmc").value === "");
+  const nameEl = await page.$(".color-name");
+  await nameEl.evaluate((e) => e.select());
+  await nameEl.focus();
+  await page.keyboard.press("Backspace");
+  await page.type(".color-dmc", "415");
+  const auto = await page.evaluate(() => ({
+    hex: document.querySelector(".color-hex").value,
+    name: document.querySelector(".color-name").value,
+  }));
+  check("C1: el DMC 415 autocompleta el color (#D3D3D6)", auto.hex === "#d3d3d6");
+  check("C1: el DMC 415 autocompleta el nombre (Pearl Gray)", auto.name === "Pearl Gray");
+
   await clickByText(page, "Crear proyecto");
   await page.waitForSelector(".project-head");
   t = await text(page);
