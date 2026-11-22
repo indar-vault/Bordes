@@ -58,6 +58,17 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 
 .log li { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; }
 .log p { margin: 4px 0; font-size: 14px; }
+.session-edit { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.session-edit .media { margin: 0; }
+
+/* Apuntes, regalo y fotos del proceso (decisión #12). */
+.meta { margin-top: 12px; }
+.project-notes { min-height: 60px; }
+.saved { color: var(--done); font-size: 13px; }
+.gallery { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0; }
+.photo { margin: 0; display: flex; flex-direction: column; gap: 4px; align-items: center; }
+.photo img { width: 150px; height: 150px; object-fit: cover; border: 1px solid var(--ink); border-radius: 8px; }
+.photo-input { margin-top: 4px; }
 
 .timer, .counter, .media { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 12px; margin-bottom: 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .counter { flex-direction: column; align-items: stretch; }

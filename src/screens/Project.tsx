@@ -1,18 +1,22 @@
 import { useEffect, useState } from "react";
-import type { Project, Thread } from "../types";
+import type { MediaLog, MediaType, Project, SessionEntry, Thread } from "../types";
 import {
   addColorToProject,
+  addProjectPhoto,
   deleteSession,
   getProject,
   getProjectThreads,
   getSessions,
   listThreads,
+  removeProjectPhoto,
   setReplacement,
   swapProjectThread,
   updateProject,
+  updateSession,
   type ThreadView,
 } from "../util/repo";
 import { projectStitchesDone, sessionSpools, sessionsByDate } from "../util/progress";
+import { resizeDataUrl } from "../util/images";
 import type { Session } from "../types";
 
 export function Project({
@@ -33,9 +37,16 @@ export function Project({
   const [library, setLibrary] = useState<Thread[]>([]);
   const [editingReplace, setEditingReplace] = useState<number | null>(null);
   const [plannedName, setPlannedName] = useState("");
+  const [notes, setNotes] = useState("");
+  const [giftTo, setGiftTo] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+  const [editingSession, setEditingSession] = useState<Session | null>(null);
 
   async function refresh() {
-    setProject(await getProject(projectId));
+    const p = await getProject(projectId);
+    setProject(p);
+    setNotes(p?.notes ?? "");
+    setGiftTo(p?.giftTo ?? "");
     setThreads(await getProjectThreads(projectId));
     setSessions(await getSessions(projectId));
     setLibrary(await listThreads());
@@ -58,6 +69,40 @@ export function Project({
 
   async function toggleStatus() {
     await updateProject(projectId, { status: project?.status === "activo" ? "terminado" : "activo" });
+    await refresh();
+  }
+
+  async function saveNotes(e: React.FormEvent) {
+    e.preventDefault();
+    await updateProject(projectId, { notes: notes.trim(), giftTo: giftTo.trim() || undefined });
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 2000);
+    await refresh();
+  }
+
+  async function addPhotos(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    for (const f of files) {
+      const reader = new FileReader();
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(f);
+      });
+      await addProjectPhoto(projectId, await resizeDataUrl(dataUrl));
+    }
+    e.target.value = "";
+    await refresh();
+  }
+
+  async function saveSessionEdit(
+    s: Session,
+    durationMin: number,
+    media: MediaLog | null,
+    entries: SessionEntry[]
+  ) {
+    await updateSession(s.id!, { durationMin, entries, media });
+    setEditingSession(null);
     await refresh();
   }
 
@@ -84,6 +129,48 @@ export function Project({
       </div>
 
       <div class="progress"><div class="progress-fill" style={{ width: `${pct}%` }} /></div>
+
+      <form class="form meta" onSubmit={saveNotes}>
+        <label>
+          Apuntes del proyecto
+          <textarea
+            class="project-notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Notas: cómo lo bordas, trucos, qué aprendiste…"
+          />
+        </label>
+        <label>
+          ¿Es un regalo?
+          <input type="text" value={giftTo} onChange={(e) => setGiftTo(e.target.value)} placeholder="Para regalar a…" />
+        </label>
+        <button class="btn ghost" type="submit">Guardar apuntes</button>
+        {notesSaved && <span class="saved">Guardado</span>}
+      </form>
+
+      <h2>Fotos del proceso</h2>
+      {project?.photos?.length ? (
+        <div class="gallery">
+          {project.photos.map((src, i) => (
+            <figure class="photo">
+              <img src={src} alt={`Foto ${i + 1} del proceso`} />
+              <button
+                class="linklike"
+                onClick={async () => {
+                  await removeProjectPhoto(projectId, i);
+                  await refresh();
+                }}
+              >
+                quitar
+              </button>
+            </figure>
+          ))}
+        </div>
+      ) : (
+        <p class="empty">Todavía no hay fotos del proceso.</p>
+      )}
+      <input class="photo-input" type="file" accept="image/*" multiple onChange={addPhotos} />
 
       <h2>Hilos del proyecto</h2>
       <ul class="threads">
@@ -146,7 +233,7 @@ export function Project({
                     await refresh();
                   }}
                 >
-                  Guardar
+                  Guardar reemplazo
                 </button>
                 <button class="linklike" onClick={() => setEditingReplace(null)}>cancelar</button>
               </span>
@@ -170,17 +257,145 @@ export function Project({
         {sessionsByDate(sessions).map((group) => (
           <li key={group.date}>
             <strong>{group.date}</strong>
-            {group.sessions.map((s) => (
-              <p key={s.id}>
-                {s.entries.reduce((a, e) => a + e.stitches, 0)} puntadas · {s.durationMin} min
-                {sessionSpools(s) > 0 ? ` · ${sessionSpools(s)} ${sessionSpools(s) === 1 ? "bobina gastada" : "bobinas gastadas"}` : ""}
-                {s.media ? ` · ${s.media.type}${s.media.title ? ": " + s.media.title : ""}${s.media.episodes ? ` (${s.media.episodes} eps)` : ""}` : ""}
-                <button class="linklike" onClick={async () => { await deleteSession(s.id!); await refresh(); }}>borrar</button>
-              </p>
-            ))}
+            {group.sessions.map((s) =>
+              editingSession?.id === s.id ? (
+                <SessionEditor
+                  key={s.id}
+                  session={s}
+                  threads={threads}
+                  onSave={(durationMin, media, entries) => saveSessionEdit(s, durationMin, media, entries)}
+                  onCancel={() => setEditingSession(null)}
+                />
+              ) : (
+                <p key={s.id}>
+                  {s.entries.reduce((a, e) => a + e.stitches, 0)} puntadas · {s.durationMin} min
+                  {sessionSpools(s) > 0 ? ` · ${sessionSpools(s)} ${sessionSpools(s) === 1 ? "bobina gastada" : "bobinas gastadas"}` : ""}
+                  {s.media ? ` · ${s.media.type}${s.media.title ? ": " + s.media.title : ""}${s.media.episodes ? ` (${s.media.episodes} eps)` : ""}` : ""}
+                  <button class="linklike" onClick={() => setEditingSession(s)}>editar</button>
+                  <button class="linklike" onClick={async () => { await deleteSession(s.id!); await refresh(); }}>borrar</button>
+                </p>
+              )
+            )}
           </li>
         ))}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Edición inline de una sesión guardada: duración, puntadas por hilo, bobinas
+ * gastadas y lo que se vio. Misma estructura que la pantalla de sesión.
+ */
+function SessionEditor({
+  session,
+  threads,
+  onSave,
+  onCancel,
+}: {
+  session: Session;
+  threads: ThreadView[];
+  onSave: (durationMin: number, media: MediaLog | null, entries: SessionEntry[]) => void;
+  onCancel: () => void;
+}) {
+  const previous = new Map(session.entries.map((e) => [e.threadId, e]));
+  const [duration, setDuration] = useState(session.durationMin);
+  const [stitches, setStitches] = useState<Record<number, number>>(
+    Object.fromEntries(session.entries.map((e) => [e.threadId, e.stitches]))
+  );
+  const [spools, setSpools] = useState<Record<number, number>>(
+    Object.fromEntries(session.entries.map((e) => [e.threadId, e.spoolsUsed ?? 0]))
+  );
+  const [mediaType, setMediaType] = useState<MediaType | "">(session.media?.type ?? "");
+  const [mediaTitle, setMediaTitle] = useState(session.media?.title ?? "");
+  const [episodes, setEpisodes] = useState(session.media?.episodes ?? 0);
+
+  const active = threads.filter((t) => t.pt.threadId);
+  const total = active.reduce((a, t) => a + (stitches[t.pt.threadId] ?? 0), 0);
+
+  return (
+    <div class="session-edit">
+      <div class="counter-row">
+        <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} min={0} style={{ width: 70 }} />
+        <span>min</span>
+      </div>
+      {active.map((t) => {
+        const id = t.pt.threadId;
+        // Las bobinas que esta sesión ya contaba vuelven a estar disponibles
+        // al re-editarla: el máximo es lo que queda + lo que gastó esta sesión.
+        const maxSpools = t.spoolsLeft + (previous.get(id)?.spoolsUsed ?? 0);
+        return (
+          <div class="counter-row" style={{ "--c": t.thread.color } as React.CSSProperties}>
+            <span class="spool" aria-hidden="true">●</span>
+            <span class="thread-name">{t.thread.name}</span>
+            <input
+              type="number"
+              value={stitches[id] ?? 0}
+              onChange={(e) => setStitches((s) => ({ ...s, [id]: Number(e.target.value) }))}
+              min={0}
+            />
+            {maxSpools > 0 && (
+              <label class="spool-used">
+                <input
+                  type="checkbox"
+                  checked={(spools[id] ?? 0) > 0}
+                  onChange={(e) => setSpools((s) => ({ ...s, [id]: e.target.checked ? 1 : 0 }))}
+                />
+                <span>¿Se gastó una bobina?</span>
+                {(spools[id] ?? 0) > 0 && (
+                  <select
+                    value={spools[id] ?? 1}
+                    onChange={(e) => setSpools((s) => ({ ...s, [id]: Number(e.target.value) }))}
+                  >
+                    {Array.from({ length: maxSpools }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>{i + 1}</option>
+                    ))}
+                  </select>
+                )}
+              </label>
+            )}
+          </div>
+        );
+      })}
+      <div class="media">
+        <label>
+          ¿Qué has visto?
+          <select value={mediaType} onChange={(e) => setMediaType(e.target.value as MediaType | "")}>
+            <option value="">—</option>
+            <option value="youtube">YouTube</option>
+            <option value="peli">Película</option>
+            <option value="serie">Serie</option>
+          </select>
+        </label>
+        {mediaType && (
+          <>
+            <input type="text" value={mediaTitle} onChange={(e) => setMediaTitle(e.target.value)} placeholder="Nombre" />
+            {mediaType === "serie" && (
+              <input type="number" value={episodes} onChange={(e) => setEpisodes(Number(e.target.value))} min={0} placeholder="Episodios" style={{ width: 80 }} />
+            )}
+          </>
+        )}
+      </div>
+      <p class="hint">Total de esta sesión: <strong>{total}</strong> puntadas</p>
+      <div class="row">
+        <button
+          class="btn"
+          onClick={() =>
+            onSave(
+              duration,
+              mediaType ? { type: mediaType, title: mediaTitle || undefined, episodes: episodes || undefined } : null,
+              active.map((t) => ({
+                threadId: t.pt.threadId,
+                stitches: stitches[t.pt.threadId] ?? 0,
+                spoolsUsed: spools[t.pt.threadId] ?? 0,
+              }))
+            )
+          }
+        >
+          Guardar cambios
+        </button>
+        <button class="linklike" onClick={onCancel}>cancelar</button>
+      </div>
+    </div>
   );
 }

@@ -3,17 +3,20 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { db } from "../db";
 import {
   addColorToProject,
+  addProjectPhoto,
   createProject,
   deleteSession,
   getProject,
   getProjectThreads,
   getSessions,
   localISO,
+  removeProjectPhoto,
   saveSession,
   setReplacement,
   swapProjectThread,
   threadUsage,
   updateProject,
+  updateSession,
 } from "./repo";
 import { buildBackup, restoreBackup, SCHEMA_VERSION } from "./export";
 import { projectStitchesDone, streak } from "./progress";
@@ -83,6 +86,52 @@ describe("repo (IndexedDB simulado)", () => {
     const s = await saveSession({ projectId: id, durationMin: 20, entries: [{ threadId: 1, stitches: 60 }] });
     await deleteSession(s.id!);
     expect((await getProjectThreads(id))[0].done).toBe(0);
+  });
+
+  it("editar una sesión rehace el progreso y las bobinas derivadas", async () => {
+    const id = await createProject({ name: "Edición", totalStitches: 100, colors: [{ color: "#444", name: "Rojo", spools: 3, totalStitches: 100 }] });
+    const tid = (await getProjectThreads(id))[0].pt.threadId;
+    const s = await saveSession({ projectId: id, durationMin: 20, entries: [{ threadId: tid, stitches: 60, spoolsUsed: 2 }] });
+    await updateSession(s.id!, {
+      durationMin: 35,
+      entries: [{ threadId: tid, stitches: 40, spoolsUsed: 1 }],
+      media: { type: "peli", title: "Matrix" },
+    });
+    const after = (await getProjectThreads(id))[0];
+    expect(after.done).toBe(40);
+    expect(after.spoolsUsed).toBe(1);
+    expect(after.spoolsLeft).toBe(2);
+    const saved = (await getSessions(id))[0];
+    expect(saved.durationMin).toBe(35);
+    expect(saved.media?.title).toBe("Matrix");
+  });
+
+  it("borrar la media de una sesión editada la deja sin serie vista", async () => {
+    const id = await createProject({ name: "Sin media", totalStitches: 10, colors: [] });
+    const s = await saveSession({ projectId: id, durationMin: 10, entries: [], media: { type: "serie", title: "Friends", episodes: 3 } });
+    await updateSession(s.id!, { media: null });
+    expect((await getSessions(id))[0].media).toBeUndefined();
+  });
+
+  it("los apuntes y el regalo se editan después de crear el proyecto", async () => {
+    const id = await createProject({ name: "Apuntes", totalStitches: 10, colors: [] });
+    await updateProject(id, { notes: "hilo doble", giftTo: "Lucía" });
+    const p = await getProject(id);
+    expect(p?.notes).toBe("hilo doble");
+    expect(p?.giftTo).toBe("Lucía");
+  });
+
+  it("las fotos del proceso se guardan, se borran y viajan en la copia", async () => {
+    const id = await createProject({ name: "Fotos", totalStitches: 10, colors: [] });
+    await addProjectPhoto(id, "data:image/jpeg;base64,AAA");
+    await addProjectPhoto(id, "data:image/jpeg;base64,BBB");
+    expect((await getProject(id))?.photos).toEqual(["data:image/jpeg;base64,AAA", "data:image/jpeg;base64,BBB"]);
+    await removeProjectPhoto(id, 0);
+    expect((await getProject(id))?.photos).toEqual(["data:image/jpeg;base64,BBB"]);
+    const backup = await buildBackup();
+    expect((backup.projects[0] as { photos?: string[] }).photos?.length).toBe(1);
+    await restoreBackup(JSON.stringify(backup));
+    expect((await getProject(id))?.photos).toEqual(["data:image/jpeg;base64,BBB"]);
   });
 
   it("la racha usa días locales con su desfase horario", async () => {

@@ -200,6 +200,49 @@ export async function deleteSession(id: number): Promise<void> {
   await db.sessions.delete(id);
 }
 
+/** Editar una sesión ya guardada (duración, entradas o media). */
+export async function updateSession(
+  id: number,
+  patch: { durationMin?: number; entries?: SessionEntry[]; media?: MediaLog | null }
+): Promise<void> {
+  const update: Record<string, unknown> = {};
+  if (patch.durationMin !== undefined) update.durationMin = Math.max(0, Math.round(patch.durationMin));
+  if (patch.entries !== undefined) {
+    update.entries = patch.entries
+      .map((e) => ({
+        threadId: e.threadId,
+        stitches: Math.max(0, Math.round(e.stitches)),
+        spoolsUsed: Math.max(0, Math.round(e.spoolsUsed ?? 0)),
+      }))
+      .filter((e) => e.stitches > 0 || e.spoolsUsed > 0);
+  }
+  if (patch.media !== undefined) update.media = patch.media ?? undefined;
+  await db.sessions.update(id, update);
+  const s = await db.sessions.get(id);
+  if (s) await db.projects.update(s.projectId, { updatedAt: localISO() });
+}
+
+/**
+ * Fotos del proceso (decisión #12): se guardan redimensionadas dentro del
+ * proyecto, y como el export vuelca los proyectos completos, viajan en la
+ * copia de seguridad JSON.
+ */
+export async function addProjectPhoto(projectId: number, dataUrl: string): Promise<void> {
+  const p = await db.projects.get(projectId);
+  if (!p) return;
+  await db.projects.update(projectId, {
+    photos: [...(p.photos ?? []), dataUrl],
+    updatedAt: localISO(),
+  });
+}
+
+export async function removeProjectPhoto(projectId: number, index: number): Promise<void> {
+  const p = await db.projects.get(projectId);
+  if (!p) return;
+  const photos = (p.photos ?? []).filter((_, i) => i !== index);
+  await db.projects.update(projectId, { photos, updatedAt: localISO() });
+}
+
 export async function getSessions(projectId: number): Promise<Session[]> {
   return db.sessions.where({ projectId }).sortBy("date");
 }

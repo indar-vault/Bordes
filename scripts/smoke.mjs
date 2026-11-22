@@ -110,7 +110,7 @@ async function main() {
   await page.waitForSelector(".replace-edit input");
   await page.evaluate(() => document.querySelector(".replace-edit input").select());
   await page.type(".replace-edit input", "Crema 752");
-  await clickByText(page, "Guardar");
+  await clickByText(page, "Guardar reemplazo");
   await page.waitForFunction(() => document.body.innerText.includes("Crema 752"), { timeout: 8000 });
   t = await text(page);
   check("El hilo marca a qué color teórico reemplaza", t.includes("reemplaza a “Crema 752”"));
@@ -169,6 +169,56 @@ async function main() {
   t = await text(page);
   check("El proyecto refleja las bobinas editadas menos la gastada", t.includes("2 bobinas") && t.includes("1 gastada"));
   check("El reemplazo sobrevive a la recarga", t.includes("Crema 752"));
+
+  // 7b. Apuntes, regalo y fotos del proceso
+  await page.waitForSelector(".project-notes");
+  await page.type(".project-notes", "hilo doble en las esquinas");
+  await page.type(".meta input[type=text]", "Marta");
+  await clickByText(page, "Guardar apuntes");
+  await page.waitForFunction(() => document.body.innerText.includes("Para regalar a Marta"), { timeout: 8000 });
+  t = await text(page);
+  check(
+    "Los apuntes se guardan y se ven en el proyecto",
+    await page.evaluate(() => document.querySelector(".project-notes").value.includes("hilo doble en las esquinas"))
+  );
+  check("El regalo se edita desde la página del proyecto", t.includes("Para regalar a Marta"));
+
+  await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 60;
+    canvas.height = 60;
+    canvas.getContext("2d").fillRect(0, 0, 60, 60);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const input = document.querySelector(".photo-input");
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], "proceso.png", { type: "image/png" }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll(".gallery .photo img").length === 1, { timeout: 10000 });
+  check(
+    "Las fotos del proceso se guardan redimensionadas",
+    await page.evaluate(() => {
+      const img = document.querySelector(".gallery .photo img");
+      return img.src.startsWith("data:image/jpeg") && img.src.length < 200000;
+    })
+  );
+
+  // 7c. Editar una sesión ya guardada
+  await clickByText(page, "editar");
+  await page.waitForSelector(".session-edit");
+  const nums = await page.$$(".session-edit .counter-row input[type=number]");
+  await nums[0].evaluate((e) => e.select());
+  await nums[0].focus();
+  await page.keyboard.type("60");
+  await nums[1].evaluate((e) => e.select());
+  await nums[1].focus();
+  await page.keyboard.type("200");
+  await clickByText(page, "Guardar cambios");
+  await page.waitForFunction(() => document.body.innerText.includes("200 / 3025"), { timeout: 8000 });
+  t = await text(page);
+  check("La sesión editada rehace el progreso (200 / 3025)", t.includes("200 / 3025"));
+  check("El registro muestra la sesión corregida", t.includes("200 puntadas · 60 min"));
 
   // 8. Sustituir un color importado por un hilo de la biblioteca
   await clickByText(page, "Inicio");

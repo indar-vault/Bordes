@@ -1,22 +1,8 @@
 import { useState } from "react";
 import { createProject, listThreads, findThreadMatch, type NewColorInput } from "../util/repo";
 import { parseFlosscross } from "../util/flosscross";
+import { resizeDataUrl } from "../util/images";
 import type { Thread } from "../types";
-
-/** Redimensiona una data-URL a máx. 800 px para no llenar IndexedDB. */
-async function resizeDataUrl(url: string): Promise<string> {
-  const img = new Image();
-  await new Promise((resolve) => {
-    img.onload = resolve;
-    img.src = url;
-  });
-  const scale = Math.min(1, 800 / Math.max(img.width, img.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(img.width * scale);
-  canvas.height = Math.round(img.height * scale);
-  canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
 
 /**
  * Color del formulario. `threadId` es el hilo REAL que se va a bordar:

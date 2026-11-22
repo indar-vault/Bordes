@@ -34,6 +34,8 @@ export interface Project {
   id?: number;
   name: string;
   image?: string; // data-URL de la foto del patrón
+  /** Fotos del proceso (data-URLs redimensionadas a ≤800 px). Decisión #12. */
+  photos?: string[];
   totalStitches: number;
   status: "activo" | "terminado";
   giftTo?: string; // "pensado para regalar a X"
