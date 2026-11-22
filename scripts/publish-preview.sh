@@ -13,7 +13,7 @@ SITE="${REPO#*/}"
 BASE_PATH="${BASE_PATH:-/${SITE}/}" npm run build
 
 tmp="$(mktemp -d)"
-cp -r dist "$tmp"
+cp -a dist/. "$tmp"
 cd "$tmp"
 git init -q
 git add -A
