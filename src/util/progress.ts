@@ -111,6 +111,25 @@ export function streak(sessions: Session[], today = new Date(), freezeDays = 0):
   return streakInfo(sessions, today, freezeDays).count;
 }
 
+/**
+ * Congelados que QUEDAN esta semana (lunes–domingo): el presupuesto semanal
+ * menos los días ya transcurridos de la semana sin sesión. Al empezar una
+ * semana nueva vuelve a estar completo.
+ */
+export function freezeLeft(sessions: Session[], freezeDays = 0, today = new Date()): number {
+  const days = new Set(sessions.map((s) => s.date.slice(0, 10)));
+  const monday = new Date(today);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const todayKey = localDay(today);
+  let empty = 0;
+  const cursor = new Date(monday);
+  while (localDay(cursor) <= todayKey) {
+    if (!days.has(localDay(cursor))) empty += 1;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return Math.max(0, freezeDays - empty);
+}
+
 /** Minutos bordados en el mes natural actual. */
 export function minutesThisMonth(sessions: Session[], today = new Date()): number {
   const prefix = localDay(today).slice(0, 7);

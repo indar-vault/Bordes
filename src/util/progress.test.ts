@@ -12,6 +12,7 @@ import {
   episodesThisMonth,
   heatmap,
   heatLevel,
+  freezeLeft,
 } from "./progress";
 
 const s = (date: string, durationMin: number, entries: { threadId: number; stitches: number; spoolsUsed?: number }[], media?: Session["media"]): Session =>
@@ -140,5 +141,19 @@ describe("progress", () => {
     const min = (n: number) => ({ date: "x", stitches: 0, minutes: n, frozen: false });
     expect([0, 10, 60, 200, 400].map((v) => heatLevel(punt(v), "puntadas"))).toEqual([0, 1, 2, 3, 4]);
     expect([0, 30, 50, 100].map((v) => heatLevel(min(v), "minutos"))).toEqual([0, 2, 3, 4]);
+  });
+
+  it("freezeLeft cuenta los descansos que quedan de la semana en curso", () => {
+    // Semana 16–22 de noviembre de 2026 (lunes a domingo). Hoy: 22 (domingo).
+    const today = new Date("2026-11-22T12:00:00");
+    const everyDay = ["16", "17", "18", "19", "20", "21", "22"].map((d) =>
+      s(`2026-11-${d}T10:00:00Z`, 10, [{ threadId: 1, stitches: 50 }])
+    );
+    expect(freezeLeft(everyDay, 2, today)).toBe(2);
+    const oneGap = everyDay.filter((x) => x.date.slice(0, 10) !== "2026-11-19");
+    expect(freezeLeft(oneGap, 2, today)).toBe(1);
+    const threeGaps = everyDay.filter((x) => !["2026-11-18", "2026-11-19", "2026-11-20"].includes(x.date.slice(0, 10)));
+    expect(freezeLeft(threeGaps, 2, today)).toBe(0);
+    expect(freezeLeft(oneGap, 0, today)).toBe(0);
   });
 });
