@@ -64,6 +64,7 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .search input { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--ink); border-radius: 8px; background: var(--card); }
 .mini { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px; min-width: 180px; font: inherit; cursor: pointer; }
 .mini-num { display: block; margin-top: 4px; font-size: 0.9em; color: var(--muted); }
+.media-hint { font-size: 0.85em; color: var(--muted); }
 
 .project-head { display: flex; gap: 16px; align-items: center; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }

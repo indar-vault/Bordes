@@ -107,6 +107,10 @@ async function main() {
   await page.waitForSelector('.media input[type="text"]');
   await page.type('.media input[type="text"]', "Friends");
   await page.type('.media input[type="number"]', "2");
+  check(
+    "D1: el campo de serie lleva datalist de autocompletado",
+    await page.evaluate(() => document.querySelector(".media input[type=text]")?.getAttribute("list") === "media-titles-session"),
+  );
 
   // Consumo manual de bobinas: checkbox + dropdown 1..bobinas disponibles
   await page.waitForSelector(".spool-used input[type=checkbox]");
@@ -337,12 +341,29 @@ async function main() {
   await page.type(".quick-minutes", "10");
   await page.type(".quick-stitches", "25");
   await page.evaluate(() => document.querySelector(".quick-spool input").click());
+
+  // 7e-bis. D1: autocompletado de series ya vistas (Friends se vio antes)
+  await page.waitForSelector(".quick-session .media select");
+  await page.select(".quick-session .media select", "serie");
+  await page.waitForSelector(".quick-session .media input[type=text]");
+  const known = await page.evaluate(() =>
+    [...document.querySelectorAll("#media-titles-quick option")].map((o) => o.value),
+  );
+  check("D1: la sesión rápida sugiere las series ya registradas", known.includes("Friends"));
+  await page.type(".quick-session .media input[type=text]", "friends");
+  await page.waitForFunction(
+    () => document.querySelector(".quick-session .media-hint")?.textContent.includes("vista 1 vez"),
+    { timeout: 8000 },
+  );
+  check("D1: el aviso recuerda cuántas veces se ha visto la serie", true);
+
   await clickByText(page, "Guardar sesión rápida");
   await page.waitForFunction(() => document.body.innerText.includes("225 / 3025"), { timeout: 8000 });
   t = await text(page);
   check("La sesión rápida suma sus puntadas (225 / 3025)", t.includes("225 / 3025"));
   check("La sesión rápida aparece en el registro", t.includes("25 puntadas · 10 min"));
   check("La sesión rápida descuenta una bobina", t.includes("2 gastadas"));
+  check("La sesión rápida guarda la serie vista", t.includes("serie: friends"));
 
   // 8. Sustituir un color importado por un hilo de la biblioteca
   await clickByText(page, "Inicio");

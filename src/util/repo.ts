@@ -1,6 +1,7 @@
 import { db } from "../db";
 import type { AppSettings, MediaLog, Project, ProjectThread, Session, SessionEntry, Thread } from "../types";
 import { isThreadComplete, threadProgress, threadSpoolsUsed } from "./progress";
+import { mediaSuggestions, type MediaSuggestion } from "./media";
 
 /**
  * Fecha/hora en hora LOCAL con su desfase (p. ej. "2026-11-20T09:30:00+01:00").
@@ -106,6 +107,11 @@ export async function listProjects(): Promise<Project[]> {
 export async function liveSessions(): Promise<Session[]> {
   const liveIds = new Set((await listProjects()).map((p) => p.id!));
   return (await db.sessions.toArray()).filter((s) => !s.deletedAt && liveIds.has(s.projectId));
+}
+
+/** Series, películas y vídeos ya apuntados, para autocompletar (D1). */
+export async function mediaHistory(): Promise<MediaSuggestion[]> {
+  return mediaSuggestions(await liveSessions());
 }
 
 /** Ajustes globales (A4): una única fila con clave "app". */

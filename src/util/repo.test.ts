@@ -15,6 +15,7 @@ import {
   listProjects,
   liveSessions,
   localISO,
+  mediaHistory,
   markBackup,
   removeProjectPhoto,
   restoreProject,
@@ -303,6 +304,21 @@ describe("repo (IndexedDB simulado)", () => {
     const s = await setSettings({ freezeDays: 1 });
     expect(s.freezeDays).toBe(1);
     expect(s.lastBackupAt).toBeTruthy();
+  });
+
+  it("D1: el historial de media ignora las sesiones borradas", async () => {
+    const id = await createProject({ name: "Media", totalStitches: 10, colors: [] });
+    await saveSession({ projectId: id, durationMin: 10, entries: [], media: { type: "serie", title: "The Office", episodes: 1 } });
+    const otra = await createProject({ name: "Otra", totalStitches: 10, colors: [] });
+    await saveSession({ projectId: otra, durationMin: 10, entries: [], media: { type: "serie", title: "The Office", episodes: 2 } });
+    const hist = await mediaHistory();
+    expect(hist).toHaveLength(1);
+    expect(hist[0].count).toBe(2);
+    expect(hist[0].title).toBe("The Office");
+    expect(hist[0].lastEpisodes).toBe(2);
+    const doomed = await saveSession({ projectId: id, durationMin: 5, entries: [], media: { type: "peli", title: "Matrix" } });
+    await deleteSession(doomed.id!);
+    expect((await mediaHistory()).map((m) => m.title)).toEqual(["The Office"]);
   });
 
   it("decisión #16: una copia de v1 se restaura en la app de v2", async () => {
