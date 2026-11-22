@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AppSettings, Project, Session } from "../types";
-import { listProjects, liveSessions, getSettings, markBackup } from "../util/repo";
+import { listProjects, liveSessions, getSettings, markBackup, setSettings } from "../util/repo";
 import {
   episodesThisMonth,
   heatmap,
@@ -71,6 +71,9 @@ export function Home({
     ? Math.floor((Date.now() - Date.parse(settings.lastBackupAt)) / 86400000)
     : 0;
   const backupStale = !settings?.lastBackupAt || daysSince > 14;
+
+  // C2: días de descanso por semana (0 = comportamiento clásico).
+  const freezeDays = settings?.freezeDays ?? 0;
 
   // B2: calendario de racha de las últimas 8 semanas.
   const heat = heatmap(sessions, 8);
@@ -161,8 +164,19 @@ export function Home({
 
           <div class="widgets">
             <div class="widget">
-              <span class="widget-num">🔥 {streak(sessions)}</span>
+              <span class="widget-num">🔥 {streak(sessions, new Date(), freezeDays)}</span>
               <span class="widget-label">días de racha</span>
+            </div>
+            <div class="widget freeze-widget">
+              <label class="freeze-label">
+                🧊
+                <select class="freeze-select" value={freezeDays} onChange={async (e) => { await setSettings({ freezeDays: Number(e.target.value) }); refresh(); }} aria-label="Días de descanso por semana">
+                  <option value="0">0 descansos</option>
+                  <option value="1">1 descanso</option>
+                  <option value="2">2 descansos</option>
+                </select>
+              </label>
+              <span class="widget-label">por semana</span>
             </div>
             <div class="widget">
               <span class="widget-num">

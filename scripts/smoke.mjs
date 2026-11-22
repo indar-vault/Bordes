@@ -201,6 +201,12 @@ async function main() {
   check("Home muestra la racha 🔥 1", t.includes("🔥 1"));
   check("Home muestra los episodios del mes", t.includes("episodios este mes"));
 
+  // 6c-bis. C2: días de descanso configurables
+  await page.waitForSelector(".freeze-select");
+  check("C2: se pueden elegir 0, 1 o 2 descansos semanales", await page.evaluate(() => document.querySelectorAll(".freeze-select option").length) === 3);
+  await page.select(".freeze-select", "1");
+  check("C2: la elección de descansos se guarda", await page.evaluate(() => document.querySelector(".freeze-select").value === "1"));
+
   // 6c. B2: calendario de racha (8 semanas)
   await page.waitForSelector(".heatmap");
   check("El heatmap tiene 56 celdas (8 semanas)", await page.evaluate(() => document.querySelectorAll(".heatmap .heat").length) === 56);

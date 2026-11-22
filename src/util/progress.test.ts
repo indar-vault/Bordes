@@ -62,6 +62,28 @@ describe("progress", () => {
     expect(streak([s("2026-11-19T10:00:00Z", 30, [])], today)).toBe(0);
   });
 
+  it("C2: los días de descanso no rompen la racha, con tope semanal", () => {
+    const sessions = [
+      s("2026-11-20T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
+      s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
+      s("2026-11-16T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
+    ];
+    expect(streak(sessions, today, 0)).toBe(1); // sin descansos: jueves rompe
+    expect(streak(sessions, today, 1)).toBe(2); // jueves congelado, martes agota
+    expect(streak(sessions, today, 2)).toBe(3); // jueves y martes, llega al lunes
+  });
+
+  it("C2: el presupuesto de descansos se renueva cada semana ISO", () => {
+    const sessions = [
+      s("2026-11-20T10:00:00Z", 20, [{ threadId: 1, stitches: 10 }]),
+      s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 10 }]),
+      s("2026-11-16T10:00:00Z", 20, [{ threadId: 1, stitches: 10 }]),
+      s("2026-11-14T10:00:00Z", 20, [{ threadId: 1, stitches: 10 }]),
+    ];
+    // 20 ✓, 19 ❄, 18 ✓, 17 ❄, 16 ✓ | 15 ❄ (nueva semana), 14 ✓
+    expect(streak(sessions, today, 2)).toBe(4);
+  });
+
   it("suma minutos y episodios del mes", () => {
     const sessions = [
       s("2026-11-15T10:00:00Z", 45, [], { type: "serie", title: "Friends", episodes: 2 }),

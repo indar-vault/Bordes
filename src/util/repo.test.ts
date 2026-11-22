@@ -20,6 +20,7 @@ import {
   restoreProject,
   restoreSession,
   saveSession,
+  setSettings,
   setReplacement,
   swapProjectThread,
   threadUsage,
@@ -295,6 +296,13 @@ describe("repo (IndexedDB simulado)", () => {
     expect(s.key).toBe("app");
     expect(s.lastBackupAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect((await getSettings())?.lastBackupAt).toBe(s.lastBackupAt);
+  });
+
+  it("C2: setSettings fusiona los ajustes sin perder los previos", async () => {
+    await markBackup();
+    const s = await setSettings({ freezeDays: 1 });
+    expect(s.freezeDays).toBe(1);
+    expect(s.lastBackupAt).toBeTruthy();
   });
 
   it("decisión #16: una copia de v1 se restaura en la app de v2", async () => {

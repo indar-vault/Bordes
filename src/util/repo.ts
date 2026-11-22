@@ -120,6 +120,13 @@ export async function markBackup(): Promise<AppSettings> {
   return s;
 }
 
+/** Cambiar ajustes globales (C2): fusiona el parche sobre la fila "app". */
+export async function setSettings(patch: Partial<AppSettings>): Promise<AppSettings> {
+  const s: AppSettings = { key: "app", ...(await getSettings()), ...patch };
+  await db.settings.put(s);
+  return s;
+}
+
 export async function getProject(id: number): Promise<Project | undefined> {
   return db.projects.get(id);
 }

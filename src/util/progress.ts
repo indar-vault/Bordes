@@ -64,20 +64,35 @@ export function localDay(d: Date): string {
 
 /**
  * Racha = días consecutivos (hasta hoy) con al menos una sesión.
- * Las sesiones de hoy cuentan; un día sin sesión la rompe.
+ * Las sesiones de hoy cuentan; un día sin sesión la rompe, salvo que queden
+ * días de descanso: máximo `freezeDays` por semana ISO (lunes a domingo).
  */
-export function streak(sessions: Session[], today = new Date()): number {
+function mondayOf(d: Date): string {
+  const m = new Date(d);
+  m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+  return localDay(m);
+}
+export function streak(sessions: Session[], today = new Date(), freezeDays = 0): number {
   const days = new Set(sessions.map((s) => s.date.slice(0, 10)));
   let count = 0;
+  let used = 0;
+  let week = mondayOf(today);
   const cursor = new Date(today);
   for (;;) {
     const key = localDay(cursor);
+    const w = mondayOf(cursor);
+    if (w !== week) {
+      week = w;
+      used = 0; // el presupuesto de congelación se renueva cada semana
+    }
     if (days.has(key)) {
       count += 1;
-      cursor.setDate(cursor.getDate() - 1);
+    } else if (used < freezeDays) {
+      used += 1; // día de descanso: no rompe la racha
     } else {
       break;
     }
+    cursor.setDate(cursor.getDate() - 1);
   }
   return count;
 }
