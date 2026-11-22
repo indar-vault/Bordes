@@ -67,6 +67,7 @@ export async function createProject(input: NewProjectInput): Promise<number> {
     notes: input.notes?.trim() ?? "",
     createdAt: now,
     updatedAt: now,
+    startDate: now,
   });
 
   let order = 0;
@@ -310,10 +311,21 @@ export async function updateThread(id: number, patch: Partial<Thread>): Promise<
   await db.threads.update(id, patch);
 }
 
+/** Editar datos del hilo dentro de un proyecto (puntadas previstas, orden...). */
+export async function updateProjectThread(ptId: number, patch: Partial<ProjectThread>): Promise<void> {
+  await db.projectThreads.update(ptId, patch);
+  const pt = await db.projectThreads.get(ptId);
+  if (pt) await db.projects.update(pt.projectId, { updatedAt: localISO() });
+}
+
 /** En un proyecto, un hilo puede ser un sustituto del color teórico del patrón. */
-export async function setReplacement(ptId: number, plannedName: string | null): Promise<void> {
+export async function setReplacement(ptId: number, plannedName: string | null, plannedDmc?: string): Promise<void> {
   const name = (plannedName ?? "").trim();
-  await db.projectThreads.update(ptId, { isReplacement: name !== "", plannedName: name });
+  await db.projectThreads.update(ptId, {
+    isReplacement: name !== "",
+    plannedName: name,
+    plannedDmc: (plannedDmc ?? "").trim() || undefined,
+  });
 }
 
 /**
@@ -324,7 +336,14 @@ export async function setReplacement(ptId: number, plannedName: string | null): 
 export async function swapProjectThread(ptId: number, threadId: number): Promise<void> {
   const pt = await db.projectThreads.get(ptId);
   if (!pt || pt.threadId === threadId) return;
-  await db.projectThreads.update(ptId, { threadId });
+  const newThread = await db.threads.get(threadId);
+  // Si el hilo elegido no coincide con el que sugería el patrón, se marca
+  // automáticamente como sustituto ("reemplaza a…").
+  const differs =
+    newThread &&
+    (newThread.name.trim().toLowerCase() !== (pt.plannedName || "").trim().toLowerCase() ||
+      (newThread.dmc || "").trim() !== (pt.plannedDmc || "").trim());
+  await db.projectThreads.update(ptId, { threadId, isReplacement: differs });
 
   // Las puntadas ya bordadas quedan registradas contra el hilo antiguo;
   // se traspasan al nuevo para no perder el progreso si el cambio se hace

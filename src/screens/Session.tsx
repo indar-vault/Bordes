@@ -16,7 +16,7 @@ export function Session({
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [manualMin, setManualMin] = useState(0);
-  const [stitches, setStitches] = useState<Record<number, number>>({});
+  const [stitches, setStitches] = useState<Record<number, string>>({});
   const [spoolsUsed, setSpoolsUsed] = useState<Record<number, number>>({});
   const [mediaType, setMediaType] = useState<MediaType | "">("");
   const [mediaTitle, setMediaTitle] = useState("");
@@ -42,7 +42,7 @@ export function Session({
     clearInterval(timer.current);
   }
 
-  const totalStitches = Object.values(stitches).reduce((a, b) => a + b, 0);
+  const totalStitches = Object.values(stitches).reduce((a, b) => a + (Number(b) || 0), 0);
   const durationMin = running || elapsed > 0 ? Math.max(1, Math.round(elapsed / 60)) : manualMin;
 
   async function save() {
@@ -53,7 +53,7 @@ export function Session({
         .filter((t) => t.pt.threadId)
         .map((t) => ({
           threadId: t.pt.threadId,
-          stitches: stitches[t.pt.threadId] ?? 0,
+          stitches: Number(stitches[t.pt.threadId]) || 0,
           spoolsUsed: spoolsUsed[t.pt.threadId] ?? 0,
         })),
       media: mediaType ? { type: mediaType, title: mediaTitle || undefined, episodes: episodes || undefined } : undefined,
@@ -95,8 +95,9 @@ export function Session({
             <span class="thread-name">{t.thread.name}</span>
             <input
               type="number"
-              value={stitches[t.pt.threadId] ?? 0}
-              onChange={(e) => setStitches((s) => ({ ...s, [t.pt.threadId]: Number(e.target.value) }))}
+              value={stitches[t.pt.threadId] ?? ""}
+              placeholder="0"
+              onChange={(e) => setStitches((s) => ({ ...s, [t.pt.threadId]: e.target.value }))}
               min={0}
             />
             <small>{t.done} / {t.pt.totalStitches}</small>

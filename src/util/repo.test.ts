@@ -26,6 +26,7 @@ import {
   swapProjectThread,
   threadUsage,
   updateProject,
+  updateProjectThread,
   updateSession,
 } from "./repo";
 import { buildBackup, restoreBackup, SCHEMA_VERSION } from "./export";
@@ -184,12 +185,31 @@ describe("repo (IndexedDB simulado)", () => {
     const id = await createProject({ name: "Re", totalStitches: 10, colors: [{ color: "#eee", name: "Blanco", dmc: "White", spools: 1, totalStitches: 10 }] });
     const pt = (await getProjectThreads(id))[0].pt;
     expect(pt.isReplacement).toBe(false);
-    await setReplacement(pt.id!, "Crema 752");
+    await setReplacement(pt.id!, "Crema 752", "752");
     const again = (await getProjectThreads(id))[0].pt;
     expect(again.isReplacement).toBe(true);
     expect(again.plannedName).toBe("Crema 752");
+    expect(again.plannedDmc).toBe("752");
     await setReplacement(pt.id!, null);
     expect((await getProjectThreads(id))[0].pt.isReplacement).toBe(false);
+  });
+
+  it("createProject pone la fecha de inicio y terminar guarda la de fin", async () => {
+    const id = await createProject({ name: "Fechas", totalStitches: 10, colors: [] });
+    const p = await getProject(id);
+    expect(p?.startDate).toBe(p?.createdAt);
+    await updateProject(id, { status: "terminado", finishedAt: localISO() });
+    const p2 = await getProject(id);
+    expect((p2?.finishedAt ?? "").length > 0).toBe(true);
+    await updateProject(id, { status: "activo", finishedAt: undefined });
+    expect((await getProject(id))?.finishedAt).toBeUndefined();
+  });
+
+  it("updateProjectThread permite editar las puntadas previstas de un color", async () => {
+    const id = await createProject({ name: "Ed", totalStitches: 20, colors: [{ color: "#000", name: "Negro", dmc: "225", spools: 2, totalStitches: 10 }] });
+    const pt = (await getProjectThreads(id))[0].pt;
+    await updateProjectThread(pt.id!, { totalStitches: 15 });
+    expect((await getProjectThreads(id))[0].pt.totalStitches).toBe(15);
   });
 
   it("un color importado puede asignarse a un hilo existente de la biblioteca", async () => {
