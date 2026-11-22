@@ -9,7 +9,8 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
 REPO="${REPO:-indar-vault/Bordes-v2}"
-BASE_PATH="${BASE_PATH:-/Bordes-v2/}" npm run build
+SITE="${REPO#*/}"
+BASE_PATH="${BASE_PATH:-/${SITE}/}" npm run build
 
 tmp="$(mktemp -d)"
 cp -r dist "$tmp"
@@ -18,4 +19,4 @@ git init -q
 git add -A
 git commit -q -m "preview $(git -C "$root" rev-parse --short HEAD)"
 git push -f "https://github.com/${REPO}.git" HEAD:gh-pages
-echo "Publicado en https://indar-vault.github.io/${REPO}/"
+echo "Publicado en https://indar-vault.github.io/${SITE}/"
