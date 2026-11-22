@@ -3,12 +3,16 @@ import type { MediaLog, MediaType, Project, SessionEntry, Thread } from "../type
 import {
   addColorToProject,
   addProjectPhoto,
+  deleteProject,
   deleteSession,
   getProject,
   getProjectThreads,
   getSessions,
+  insertProjectPhoto,
   listThreads,
   removeProjectPhoto,
+  restoreProject,
+  restoreSession,
   setReplacement,
   swapProjectThread,
   updateProject,
@@ -24,11 +28,14 @@ export function Project({
   onStartSession,
   onOpenSummary,
   onBack,
+  onDeleted,
 }: {
   projectId: number;
   onStartSession: (id: number) => void;
   onOpenSummary: (id: number) => void;
   onBack: () => void;
+  /** A3: registrar un borrado suave y su acción de deshacer. */
+  onDeleted: (label: string, run: () => Promise<void>) => void;
 }) {
   const [project, setProject] = useState<Project | undefined>();
   const [threads, setThreads] = useState<ThreadView[]>([]);
@@ -124,6 +131,17 @@ export function Project({
               {project?.status === "activo" ? "Marcar terminado" : "Reabrir"}
             </button>
             <button class="btn ghost" onClick={onBack}>← Inicio</button>
+            <button
+              class="btn ghost danger"
+              onClick={async () => {
+                const name = project?.name ?? "Proyecto";
+                await deleteProject(projectId);
+                onDeleted(`el proyecto “${name}”`, () => restoreProject(projectId));
+                onBack();
+              }}
+            >
+              Eliminar proyecto
+            </button>
           </div>
         </div>
       </div>
@@ -158,7 +176,12 @@ export function Project({
               <button
                 class="linklike"
                 onClick={async () => {
+                  const photo = src;
                   await removeProjectPhoto(projectId, i);
+                  onDeleted("la foto", async () => {
+                    await insertProjectPhoto(projectId, photo, i);
+                    await refresh();
+                  });
                   await refresh();
                 }}
               >
@@ -272,7 +295,14 @@ export function Project({
                   {sessionSpools(s) > 0 ? ` · ${sessionSpools(s)} ${sessionSpools(s) === 1 ? "bobina gastada" : "bobinas gastadas"}` : ""}
                   {s.media ? ` · ${s.media.type}${s.media.title ? ": " + s.media.title : ""}${s.media.episodes ? ` (${s.media.episodes} eps)` : ""}` : ""}
                   <button class="linklike" onClick={() => setEditingSession(s)}>editar</button>
-                  <button class="linklike" onClick={async () => { await deleteSession(s.id!); await refresh(); }}>borrar</button>
+                  <button class="linklike" onClick={async () => {
+                    await deleteSession(s.id!);
+                    onDeleted(`la sesión del ${s.date.slice(0, 10)}`, async () => {
+                      await restoreSession(s.id!);
+                      await refresh();
+                    });
+                    await refresh();
+                  }}>borrar</button>
                 </p>
               )
             )}

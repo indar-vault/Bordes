@@ -1,7 +1,7 @@
 // Prueba de humo end-to-end con Chromium real sobre la app servida.
 // Uso: npm run smoke   (levanta `vite preview` y abre http://localhost:4173)
 import puppeteer from "puppeteer-core";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 
 const URL = process.env.SMOKE_URL ?? "http://localhost:4173/";
 const DL = "/tmp/opencode/bordes-smoke-downloads";
@@ -134,13 +134,14 @@ async function main() {
   check("El resumen tiene botones de impresión y CSV", await page.evaluate(() => !!document.querySelector(".print-btn") && !!document.querySelector(".csv-export")));
   check("La hoja de estilos incluye reglas @media print", await page.evaluate(() => [...document.styleSheets].some((ss) => { try { return [...ss.cssRules].some((r) => r.cssText.includes("@media print")); } catch { return false; } })));
   mkdirSync(DL, { recursive: true });
-  const before = new Set(readdirSync(DL));
+  rmSync(DL, { recursive: true, force: true });
+  mkdirSync(DL);
   const cdp = await page.createCDPSession();
   await cdp.send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: DL });
   await clickByText(page, "Exportar CSV");
   let csv = "";
   for (let i = 0; i < 40 && !csv; i++) {
-    const fresh = readdirSync(DL).filter((f) => f.endsWith(".csv") && !before.has(f));
+    const fresh = readdirSync(DL).filter((f) => f.endsWith(".csv"));
     if (fresh.length) csv = readFileSync(`${DL}/${fresh[0]}`, "utf8");
     else await new Promise((r) => setTimeout(r, 250));
   }
@@ -260,6 +261,22 @@ async function main() {
   check("La sesión editada rehace el progreso (200 / 3025)", t.includes("200 / 3025"));
   check("El registro muestra la sesión corregida", t.includes("200 puntadas · 60 min"));
 
+  // 7d. A3: borrar una sesión se puede deshacer
+  await clickByText(page, "borrar");
+  await page.waitForFunction(
+    () => document.querySelector(".undo-banner") && !document.body.innerText.includes("200 puntadas"),
+    { timeout: 8000 }
+  );
+  t = await text(page);
+  check("Al borrar, la sesión desaparece del registro", !t.includes("200 puntadas"));
+  check("Aparece un banner para deshacer el borrado", t.includes("Se ha eliminado la sesión"));
+  await clickByText(page, "Deshacer");
+  await page.waitForFunction(
+    () => document.body.innerText.includes("200 puntadas · 60 min") && !document.querySelector(".undo-banner"),
+    { timeout: 8000 }
+  );
+  check("Deshacer devuelve la sesión y su progreso", (await text(page)).includes("200 / 3025"));
+
   // 8. Sustituir un color importado por un hilo de la biblioteca
   await clickByText(page, "Inicio");
   await page.waitForFunction(() => document.body.innerText.includes("Flor de lis"), { timeout: 8000 });
@@ -299,6 +316,20 @@ async function main() {
   t = await text(page);
   check("Los terminados aparecen en su propia sección", t.includes("Terminados") && t.includes("Olivia Rodrigo"));
   check("El hero pasa a ser el proyecto activo restante", await page.evaluate(() => document.querySelector(".hero-card").textContent.includes("Flor de lis")));
+
+  // 8c. A3: eliminar un proyecto y deshacerlo
+  await page.evaluate(() => document.querySelector(".hero-card").click());
+  await page.waitForSelector(".project-head");
+  await clickByText(page, "Eliminar proyecto");
+  await page.waitForFunction(() => document.querySelector(".undo-banner"), { timeout: 8000 });
+  await page.waitForFunction(
+    () => ![...document.querySelectorAll(".mini, .hero-card")].some((m) => m.textContent.includes("Flor de lis")),
+    { timeout: 8000 }
+  );
+  check("El proyecto borrado desaparece de Inicio", (await text(page)).includes("Se ha eliminado el proyecto"));
+  await clickByText(page, "Deshacer");
+  await page.waitForFunction(() => document.body.innerText.includes("Flor de lis"), { timeout: 8000 });
+  check("Deshacer devuelve el proyecto a Inicio", (await text(page)).includes("Flor de lis"));
 
   // 7. Offline: el service worker debe servir la app sin red
   await page.goto(URL, { waitUntil: "networkidle0" }); // deja los assets en caché

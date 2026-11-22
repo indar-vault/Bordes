@@ -99,7 +99,13 @@ export async function createProject(input: NewProjectInput): Promise<number> {
 }
 
 export async function listProjects(): Promise<Project[]> {
-  return db.projects.orderBy("updatedAt").reverse().toArray();
+  return (await db.projects.orderBy("updatedAt").reverse().toArray()).filter((p) => !p.deletedAt);
+}
+
+/** Sesiones vivas (sin borrado suave) de proyectos vivos, para los widgets. */
+export async function liveSessions(): Promise<Session[]> {
+  const liveIds = new Set((await listProjects()).map((p) => p.id!));
+  return (await db.sessions.toArray()).filter((s) => !s.deletedAt && liveIds.has(s.projectId));
 }
 
 export async function getProject(id: number): Promise<Project | undefined> {
@@ -110,10 +116,17 @@ export async function updateProject(id: number, patch: Partial<Project>): Promis
   await db.projects.update(id, { ...patch, updatedAt: localISO() });
 }
 
+/**
+ * Borrado suave (A3): la sesión y el proyecto se marcan con `deletedAt` y
+ * siguen en la base hasta la purga (exportar una copia). Así se pueden
+ * deshacer desde el banner.
+ */
 export async function deleteProject(id: number): Promise<void> {
-  await db.sessions.where({ projectId: id }).delete();
-  await db.projectThreads.where({ projectId: id }).delete();
-  await db.projects.delete(id);
+  await db.projects.update(id, { deletedAt: localISO() });
+}
+
+export async function restoreProject(id: number): Promise<void> {
+  await db.projects.update(id, { deletedAt: undefined });
 }
 
 /** Hilo tal como participa en un proyecto, con su progreso derivado. */
@@ -130,9 +143,9 @@ export interface ThreadView {
 
 export async function getProjectThreads(projectId: number): Promise<ThreadView[]> {
   const pts = await db.projectThreads.where({ projectId }).sortBy("order");
-  const sessions = await db.sessions.where({ projectId }).toArray();
+  const sessions = (await db.sessions.where({ projectId }).toArray()).filter((s) => !s.deletedAt);
   // El gasto de bobinas es global: un mismo hilo puede gastarse en varios proyectos.
-  const allSessions = await db.sessions.toArray();
+  const allSessions = (await db.sessions.toArray()).filter((s) => !s.deletedAt);
   const views: ThreadView[] = [];
   for (const pt of pts) {
     const thread = await db.threads.get(pt.threadId);
@@ -197,7 +210,11 @@ export async function saveSession(input: {
 }
 
 export async function deleteSession(id: number): Promise<void> {
-  await db.sessions.delete(id);
+  await db.sessions.update(id, { deletedAt: localISO() });
+}
+
+export async function restoreSession(id: number): Promise<void> {
+  await db.sessions.update(id, { deletedAt: undefined });
 }
 
 /** Editar una sesión ya guardada (duración, entradas o media). */
@@ -243,8 +260,18 @@ export async function removeProjectPhoto(projectId: number, index: number): Prom
   await db.projects.update(projectId, { photos, updatedAt: localISO() });
 }
 
+/** Reinsertar una foto eliminada en su posición original (deshacer, A3). */
+export async function insertProjectPhoto(projectId: number, dataUrl: string, index: number): Promise<void> {
+  const p = await db.projects.get(projectId);
+  if (!p) return;
+  const photos = [...(p.photos ?? [])];
+  photos.splice(index, 0, dataUrl);
+  await db.projects.update(projectId, { photos, updatedAt: localISO() });
+}
+
 export async function getSessions(projectId: number): Promise<Session[]> {
-  return db.sessions.where({ projectId }).sortBy("date");
+  const sessions = await db.sessions.where({ projectId }).sortBy("date");
+  return sessions.filter((s) => !s.deletedAt);
 }
 
 /** Biblioteca global de hilos. */
@@ -275,7 +302,7 @@ export async function swapProjectThread(ptId: number, threadId: number): Promise
   // Las puntadas ya bordadas quedan registradas contra el hilo antiguo;
   // se traspasan al nuevo para no perder el progreso si el cambio se hace
   // a mitad de proyecto.
-  const sessions = await db.sessions.where({ projectId: pt.projectId }).toArray();
+  const sessions = (await db.sessions.where({ projectId: pt.projectId }).toArray()).filter((s) => !s.deletedAt);
   for (const s of sessions) {
     if (!s.entries.some((e) => e.threadId === pt.threadId)) continue;
     const merged: SessionEntry[] = [];
@@ -295,7 +322,7 @@ export async function swapProjectThread(ptId: number, threadId: number): Promise
 /** Carretes que usan cada hilo (para la pantalla de biblioteca). */
 export async function threadUsage(): Promise<Record<number, string[]>> {
   const pts = await db.projectThreads.toArray();
-  const projects = await db.projects.toArray();
+  const projects = await listProjects();
   const names = new Map<number, string>(projects.map((p) => [p.id!, p.name]));
   const usage: Record<number, string[]> = {};
   for (const pt of pts) {

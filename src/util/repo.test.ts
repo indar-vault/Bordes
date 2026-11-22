@@ -5,12 +5,18 @@ import {
   addColorToProject,
   addProjectPhoto,
   createProject,
+  deleteProject,
   deleteSession,
   getProject,
   getProjectThreads,
   getSessions,
+  insertProjectPhoto,
+  listProjects,
+  liveSessions,
   localISO,
   removeProjectPhoto,
+  restoreProject,
+  restoreSession,
   saveSession,
   setReplacement,
   swapProjectThread,
@@ -31,6 +37,7 @@ describe("repo (IndexedDB simulado)", () => {
     await db.threads.clear();
     await db.projectThreads.clear();
     await db.sessions.clear();
+    await db.settings.clear();
   });
 
   it("crea un proyecto con colores y lo deriva de las sesiones", async () => {
@@ -234,5 +241,53 @@ describe("repo (IndexedDB simulado)", () => {
   it("localISO produce fecha local con desfase", () => {
     const iso = localISO(new Date("2026-11-20T08:00:00Z"));
     expect(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/.test(iso)).toBe(true);
+  });
+
+  it("A3: al borrar una sesión se puede deshacer y el progreso vuelve", async () => {
+    const id = await createProject({ name: "Undo", totalStitches: 100, colors: [{ color: "#111", name: "Negro", spools: 1, totalStitches: 100 }] });
+    const s = await saveSession({ projectId: id, durationMin: 20, entries: [{ threadId: 1, stitches: 60 }] });
+    await deleteSession(s.id!);
+    expect(await getSessions(id)).toHaveLength(0);
+    expect(await projectStitchesDone(await getSessions(id), id)).toBe(0);
+    await restoreSession(s.id!);
+    const back = await getSessions(id);
+    expect(back).toHaveLength(1);
+    expect(back[0].entries[0].stitches).toBe(60);
+    expect(await projectStitchesDone(back, id)).toBe(60);
+  });
+
+  it("A3: un proyecto borrado desaparece de la lista y revive al deshacer", async () => {
+    const id = await createProject({ name: "Borrado", totalStitches: 10, colors: [] });
+    await saveSession({ projectId: id, durationMin: 10, entries: [] });
+    await deleteProject(id);
+    expect(await listProjects()).toHaveLength(0);
+    expect(await liveSessions()).toHaveLength(0);
+    await restoreProject(id);
+    expect((await listProjects()).map((p) => p.name)).toContain("Borrado");
+    expect(await liveSessions()).toHaveLength(1);
+  });
+
+  it("A3: la copia exportada purge lo borrado suavemente", async () => {
+    const id = await createProject({ name: "Purga", totalStitches: 10, colors: [] });
+    const s = await saveSession({ projectId: id, durationMin: 10, entries: [{ threadId: 1, stitches: 5 }] });
+    await deleteSession(s.id!);
+    await deleteProject(id);
+    const backup = await buildBackup();
+    expect(backup.projects).toHaveLength(0);
+    expect(backup.sessions).toHaveLength(0);
+  });
+
+  it("decisión #16: una copia de v1 se restaura en la app de v2", async () => {
+    const v1 = {
+      schemaVersion: 1,
+      exportedAt: "2026-11-01T00:00:00.000+01:00",
+      projects: [{ id: 1, name: "Vintage", totalStitches: 20, status: "activo", notes: "", createdAt: "2026-11-01", updatedAt: "2026-11-01" }],
+      threads: [],
+      projectThreads: [],
+      sessions: [{ id: 1, projectId: 1, date: "2026-11-02", durationMin: 15, entries: [{ threadId: 1, stitches: 7 }] }],
+    };
+    const data = await restoreBackup(JSON.stringify(v1));
+    expect(data.schemaVersion).toBe(1);
+    expect((await getSessions(1))[0].durationMin).toBe(15);
   });
 });

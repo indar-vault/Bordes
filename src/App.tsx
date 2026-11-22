@@ -15,6 +15,18 @@ type View = "home" | "project" | "session" | "new" | "threads" | "summary";
 export function App() {
   const [view, setView] = useState<View>("home");
   const [projectId, setProjectId] = useState<number | null>(null);
+  /** Último borrado suave (A3) y cómo deshacerlo. */
+  const [undo, setUndo] = useState<{ label: string; run: () => Promise<void> } | null>(null);
+  // Tras un deshacer, Home (ya montado) necesita volver a leer la base.
+  const [nonce, setNonce] = useState(0);
+
+  const onDeleted = (label: string, run: () => Promise<void>) => setUndo({ label, run });
+  async function handleUndo() {
+    if (!undo) return;
+    await undo.run();
+    setUndo(null);
+    setNonce((n) => n + 1);
+  }
 
   const openProject = (id: number) => {
     setProjectId(id);
@@ -36,10 +48,16 @@ export function App() {
         <button class={view === "new" ? "active" : ""} onClick={() => setView("new")}>Nuevo proyecto</button>
         <button class={view === "threads" ? "active" : ""} onClick={() => setView("threads")}>Hilos</button>
       </nav>
-      {view === "home" && <Home onOpenProject={openProject} onNewProject={() => setView("new")} />}
+      {undo && (
+        <div class="undo-banner" role="status">
+          <span>Se ha eliminado {undo.label}</span>
+          <button class="btn" onClick={handleUndo}>Deshacer</button>
+        </div>
+      )}
+      {view === "home" && <Home onOpenProject={openProject} onNewProject={() => setView("new")} refreshKey={nonce} />}
       {view === "threads" && <Threads />}
       {view === "project" && projectId != null && (
-        <Project projectId={projectId} onStartSession={startSession} onOpenSummary={openSummary} onBack={() => setView("home")} />
+        <Project projectId={projectId} onStartSession={startSession} onOpenSummary={openSummary} onBack={() => setView("home")} onDeleted={onDeleted} />
       )}
       {view === "summary" && projectId != null && <Summary projectId={projectId} onBack={() => setView("project")} />}
       {view === "session" && projectId != null && <Session projectId={projectId} onDone={() => setView("project")} />}

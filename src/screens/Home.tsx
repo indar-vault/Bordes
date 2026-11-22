@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { db } from "../db";
 import type { Project, Session } from "../types";
-import { listProjects } from "../util/repo";
+import { listProjects, liveSessions } from "../util/repo";
 import {
   episodesThisMonth,
   localDay,
@@ -14,9 +13,12 @@ import { buildBackup, restoreBackup } from "../util/export";
 export function Home({
   onOpenProject,
   onNewProject,
+  refreshKey = 0,
 }: {
   onOpenProject: (id: number) => void;
   onNewProject: () => void;
+  /** Cambia cuando se deshace un borrado (A3) para volver a leer la base. */
+  refreshKey?: number;
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -25,11 +27,11 @@ export function Home({
 
   async function refresh() {
     setProjects(await listProjects());
-    setSessions(await db.sessions.toArray());
+    setSessions(await liveSessions());
   }
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refreshKey]);
 
   const active = projects.filter((p) => p.status === "activo");
   const hero = active[0];

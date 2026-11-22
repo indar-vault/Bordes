@@ -42,6 +42,8 @@ export interface Project {
   notes: string;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  /** Borrado suave (A3): se puede deshacer hasta purgar con una copia. */
+  deletedAt?: string;
 }
 
 export interface SessionEntry {
@@ -58,4 +60,16 @@ export interface Session {
   durationMin: number;
   entries: SessionEntry[]; // puntadas por color — única fuente de verdad del progreso
   media?: MediaLog;
+  /** Borrado suave (A3): se puede deshacer hasta purgar con una copia. */
+  deletedAt?: string;
+}
+
+/**
+ * Ajustes globales de la app (A4): una única fila con clave "app".
+ * `freezeDays` (C2) queda reservado para los días congelados de la racha.
+ */
+export interface AppSettings {
+  key: string;
+  lastBackupAt?: string; // ISO de la última copia exportada
+  freezeDays?: number; // 0, 1 o 2 días congelados por semana
 }
