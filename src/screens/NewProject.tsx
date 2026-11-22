@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createProject, listThreads, findThreadMatch, type NewColorInput } from "../util/repo";
 import { parseFlosscross } from "../util/flosscross";
 import { resizeDataUrl } from "../util/images";
@@ -31,6 +31,11 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
   const [library, setLibrary] = useState<Thread[]>([]);
   const [importInfo, setImportInfo] = useState("");
   const [error, setError] = useState("");
+
+  // La biblioteca de hilos guardados está disponible aunque no se importe un patrón.
+  useEffect(() => {
+    listThreads().then(setLibrary);
+  }, []);
 
   async function importFcjson(file: File) {
     setError("");
@@ -125,7 +130,7 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
 
         <label>
           Puntadas totales
-          <input id="project-total" type="number" value={total} onChange={(e) => setTotal(Number(e.target.value))} min={0} />
+          <input id="project-total" type="number" value={total === 0 ? "" : total} placeholder="0" onChange={(e) => setTotal(Number(e.target.value))} min={0} />
           {grid && (
             <span class="total-hint">
               <button type="button" class="chip" onClick={() => setTotal(grid.w * grid.h)}>
@@ -178,7 +183,7 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
                   />
                 </td>
                 <td><input class="color-spools" type="number" value={c.spools ?? 1} onChange={(e) => setColor(i, { spools: Number(e.target.value) })} min={0} max={99} /></td>
-                <td><input class="color-total" type="number" value={c.totalStitches} onChange={(e) => setColor(i, { totalStitches: Number(e.target.value) })} min={0} max={9999} /></td>
+                <td><input class="color-total" type="number" value={c.totalStitches === 0 ? "" : c.totalStitches} placeholder="0" onChange={(e) => setColor(i, { totalStitches: Number(e.target.value) })} min={0} max={9999} /></td>
                 <td>
                   <select
                     class="color-thread"
@@ -200,10 +205,17 @@ export function NewProject({ onCreated }: { onCreated: (id: number) => void }) {
             ))}
           </tbody>
         </table>
-        <p class="hint">
-          Suma de puntadas por color: {colorSum}
-          {total > 0 && total !== colorSum ? " ≠ total del proyecto (la rejilla completa)" : ""}
-        </p>
+        {total > 0 && total !== colorSum ? (
+          <p class="hint mismatch">
+            ⚠ Suma de puntadas por color: <strong>{colorSum}</strong> ≠ total del proyecto
+            (<strong>{total}</strong>).{" "}
+            {colorSum < total
+              ? `Faltan ${total - colorSum} puntadas por asignar a los colores.`
+              : `Los colores suman ${colorSum - total} puntadas más que el total.`}
+          </p>
+        ) : (
+          <p class="hint">Suma de puntadas por color: {colorSum}</p>
+        )}
         <button type="button" class="btn ghost" onClick={() => setColors((cs) => [...cs, { color: "#ffffff", name: "", dmc: "", spools: 1, totalStitches: 0, threadId: 0 }])}>
           + Añadir color
         </button>
