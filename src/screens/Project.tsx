@@ -107,9 +107,11 @@ export function Project({
     s: Session,
     durationMin: number,
     media: MediaLog | null,
-    entries: SessionEntry[]
+    entries: SessionEntry[],
+    photos: string[],
+    notes: string
   ) {
-    await updateSession(s.id!, { durationMin, entries, media });
+    await updateSession(s.id!, { durationMin, entries, media, photos, notes });
     setEditingSession(null);
     await refresh();
   }
@@ -338,14 +340,16 @@ export function Project({
                   key={s.id}
                   session={s}
                   threads={threads}
-                  onSave={(durationMin, media, entries) => saveSessionEdit(s, durationMin, media, entries)}
+                  onSave={(durationMin, media, entries, photos, notes) => saveSessionEdit(s, durationMin, media, entries, photos, notes)}
                   onCancel={() => setEditingSession(null)}
                 />
               ) : (
-                <p key={s.id}>
+                <div key={s.id}>
+                  <p>
                   {s.entries.reduce((a, e) => a + e.stitches, 0)} puntadas · {s.durationMin} min
                   {sessionSpools(s) > 0 ? ` · ${sessionSpools(s)} ${sessionSpools(s) === 1 ? "bobina gastada" : "bobinas gastadas"}` : ""}
                   {s.media ? ` · ${s.media.type}${s.media.title ? ": " + s.media.title : ""}${s.media.episodes ? ` (${s.media.episodes} eps)` : ""}` : ""}
+                  {s.notes ? <em> · {s.notes}</em> : ""}
                   <button class="linklike" onClick={() => setEditingSession(s)}>editar</button>
                   <button class="linklike" onClick={async () => {
                     await deleteSession(s.id!);
@@ -355,7 +359,15 @@ export function Project({
                     });
                     await refresh();
                   }}>borrar</button>
-                </p>
+                  </p>
+                  {s.photos?.length ? (
+                    <div class="session-photos">
+                      {s.photos.map((src, i) => (
+                        <img key={i} src={src} alt={`Foto ${i + 1} de la sesión del ${s.date.slice(0, 10)}`} />
+                      ))}
+                    </div>
+                  ) : ""}
+                </div>
               )
             )}
           </li>
@@ -377,7 +389,7 @@ function SessionEditor({
 }: {
   session: Session;
   threads: ThreadView[];
-  onSave: (durationMin: number, media: MediaLog | null, entries: SessionEntry[]) => void;
+  onSave: (durationMin: number, media: MediaLog | null, entries: SessionEntry[], photos: string[], notes: string) => void;
   onCancel: () => void;
 }) {
   const previous = new Map(session.entries.map((e) => [e.threadId, e]));
@@ -391,6 +403,8 @@ function SessionEditor({
   const [mediaType, setMediaType] = useState<MediaType | "">(session.media?.type ?? "");
   const [mediaTitle, setMediaTitle] = useState(session.media?.title ?? "");
   const [episodes, setEpisodes] = useState(session.media?.episodes ?? 0);
+  const [photos, setPhotos] = useState<string[]>(session.photos ?? []);
+  const [notes, setNotes] = useState(session.notes ?? "");
 
   const active = threads.filter((t) => t.pt.threadId);
   const total = active.reduce((a, t) => a + (stitches[t.pt.threadId] ?? 0), 0);
@@ -459,6 +473,41 @@ function SessionEditor({
         )}
       </div>
       <p class="hint">Total de esta sesión: <strong>{total}</strong> puntadas</p>
+      <label class="session-notes-label">
+        Apuntes de la sesión
+        <input class="session-notes" type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="qué hilo, qué truco…" />
+      </label>
+      {photos.length > 0 && (
+        <div class="session-photos">
+          {photos.map((src, i) => (
+            <figure key={i}>
+              <img src={src} alt={`Foto ${i + 1} de la sesión`} />
+              <button class="linklike" onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))}>quitar</button>
+            </figure>
+          ))}
+        </div>
+      )}
+      <input
+        class="session-photo-input"
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={async (e) => {
+          const files = Array.from(e.target.files ?? []);
+          const added: string[] = [];
+          for (const f of files) {
+            const reader = new FileReader();
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(f);
+            });
+            added.push(await resizeDataUrl(dataUrl, 600));
+          }
+          if (added.length) setPhotos((p) => [...p, ...added]);
+          e.target.value = "";
+        }}
+      />
       <div class="row">
         <button
           class="btn"
@@ -470,7 +519,9 @@ function SessionEditor({
                 threadId: t.pt.threadId,
                 stitches: stitches[t.pt.threadId] ?? 0,
                 spoolsUsed: spools[t.pt.threadId] ?? 0,
-              }))
+              })),
+              photos,
+              notes.trim()
             )
           }
         >

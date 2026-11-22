@@ -60,6 +60,10 @@ export interface Session {
   durationMin: number;
   entries: SessionEntry[]; // puntadas por color — única fuente de verdad del progreso
   media?: MediaLog;
+  /** B3: fotos tomadas en esta sesión (data-URLs redimensionadas). */
+  photos?: string[];
+  /** B4: apuntes de la sesión. */
+  notes?: string;
   /** Borrado suave (A3): se puede deshacer hasta purgar con una copia. */
   deletedAt?: string;
 }

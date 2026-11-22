@@ -260,8 +260,33 @@ async function main() {
   await nums[1].evaluate((e) => e.select());
   await nums[1].focus();
   await page.keyboard.type("200");
+
+  // 7c-bis. B3+B4: foto y apuntes de la sesión
+  await page.evaluate(async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 50;
+    canvas.height = 50;
+    canvas.getContext("2d").fillRect(0, 0, 50, 50);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const input = document.querySelector(".session-photo-input");
+    const dt = new DataTransfer();
+    dt.items.add(new File([blob], "progreso.png", { type: "image/png" }));
+    input.files = dt.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.waitForFunction(() => document.querySelectorAll(".session-edit .session-photos img").length === 1, { timeout: 10000 });
+  await page.waitForSelector(".session-notes");
+  await page.type(".session-notes", "cambio de hilo a mitad");
   await clickByText(page, "Guardar cambios");
-  await page.waitForFunction(() => document.body.innerText.includes("200 / 3025"), { timeout: 8000 });
+  await page.waitForFunction(
+    () => document.body.innerText.includes("200 / 3025") && document.querySelector(".log .session-photos img"),
+    { timeout: 8000 }
+  );
+  check("B3: la foto de la sesión aparece en el registro", await page.evaluate(() => {
+    const img = document.querySelector(".log .session-photos img");
+    return img && img.src.startsWith("data:image/jpeg") && img.src.length < 200000;
+  }));
+  check("B4: el apunte de la sesión se ve en el registro", (await text(page)).includes("cambio de hilo a mitad"));
   t = await text(page);
   check("La sesión editada rehace el progreso (200 / 3025)", t.includes("200 / 3025"));
   check("El registro muestra la sesión corregida", t.includes("200 puntadas · 60 min"));

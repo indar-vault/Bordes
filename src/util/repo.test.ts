@@ -279,6 +279,17 @@ describe("repo (IndexedDB simulado)", () => {
     expect(backup.sessions).toHaveLength(0);
   });
 
+  it("B3+B4: una sesión guarda fotos y apuntes, y viajan en la copia", async () => {
+    const id = await createProject({ name: "Sesión con fotos", totalStitches: 10, colors: [{ color: "#111", name: "Rojo", spools: 1, totalStitches: 10 }] });
+    const s = await saveSession({ projectId: id, durationMin: 10, entries: [{ threadId: 1, stitches: 5 }] });
+    await updateSession(s.id!, { photos: ["data:image/jpeg;base64,xyz"], notes: "hilo doble" });
+    const after = (await getSessions(id))[0];
+    expect(after.photos).toEqual(["data:image/jpeg;base64,xyz"]);
+    expect(after.notes).toBe("hilo doble");
+    const backup = await buildBackup();
+    expect((backup.sessions[0] as { photos?: string[] }).photos?.length).toBe(1);
+  });
+
   it("A4: al exportar la copia queda registrada su fecha", async () => {
     const s = await markBackup();
     expect(s.key).toBe("app");

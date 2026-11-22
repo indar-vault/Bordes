@@ -232,7 +232,7 @@ export async function restoreSession(id: number): Promise<void> {
 /** Editar una sesión ya guardada (duración, entradas o media). */
 export async function updateSession(
   id: number,
-  patch: { durationMin?: number; entries?: SessionEntry[]; media?: MediaLog | null }
+  patch: { durationMin?: number; entries?: SessionEntry[]; media?: MediaLog | null; photos?: string[]; notes?: string }
 ): Promise<void> {
   const update: Record<string, unknown> = {};
   if (patch.durationMin !== undefined) update.durationMin = Math.max(0, Math.round(patch.durationMin));
@@ -246,6 +246,8 @@ export async function updateSession(
       .filter((e) => e.stitches > 0 || e.spoolsUsed > 0);
   }
   if (patch.media !== undefined) update.media = patch.media ?? undefined;
+  if (patch.photos !== undefined) update.photos = patch.photos;
+  if (patch.notes !== undefined) update.notes = patch.notes;
   await db.sessions.update(id, update);
   const s = await db.sessions.get(id);
   if (s) await db.projects.update(s.projectId, { updatedAt: localISO() });

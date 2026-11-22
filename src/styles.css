@@ -54,6 +54,9 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .heat-1 { background: #ffd9a8; }
 .heat-2 { background: #f2a65a; }
 .heat-3 { background: #d4622a; }
+.session-photos { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
+.session-photos img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #d8d8d8; }
+.session-notes-label { display: block; margin: 8px 0; }
 .minis { display: flex; gap: 10px; flex-wrap: wrap; }
 /* A1: búsqueda en Inicio */
 .search { margin: 10px 0 14px; }
