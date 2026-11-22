@@ -205,17 +205,25 @@ async function main() {
   check("Home muestra la racha 🔥 1", t.includes("🔥 1"));
   check("Home muestra los episodios del mes", t.includes("episodios este mes"));
 
-  // 6c-bis. C2: días de descanso configurables
+  // 6c-bis. Configuración: días de descanso (C2) y copias (A4)
+  await clickByText(page, "Configuración");
   await page.waitForSelector(".freeze-select");
   check("C2: se pueden elegir 0, 1 o 2 descansos semanales", await page.evaluate(() => document.querySelectorAll(".freeze-select option").length) === 3);
   await page.select(".freeze-select", "1");
-  check("C2: la elección de descansos se guarda", await page.evaluate(() => document.querySelector(".freeze-select").value === "1"));
+  check("C2: la elección de descansos se guarda", await page.waitForFunction(() => document.querySelector(".freeze-select").value === "1", { timeout: 8000 }).then(() => true));
+  check("Configuración tiene exportar e importar copias", await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Exportar copia (JSON)")) && !!document.querySelector(".import input[type=file]")));
 
-  // 6c. B2: calendario de racha (8 semanas)
+  // 6c. B2: calendario de racha (12 semanas, filas por día de la semana)
+  await clickByText(page, "Inicio");
   await page.waitForSelector(".heatmap");
-  check("El heatmap tiene 56 celdas (8 semanas)", await page.evaluate(() => document.querySelectorAll(".heatmap .heat").length) === 56);
-  check("El heatmap marca los días con sesión", await page.evaluate(() => [...document.querySelectorAll(".heat")].some((c) => c.className !== "heat")));
-  check("El heatmap muestra las puntadas por día al pasar el ratón", await page.evaluate(() => [...document.querySelectorAll(".heat")].some((c) => c.title.includes("puntadas"))));
+  check("El calendario tiene 84 celdas (12 semanas)", await page.evaluate(() => document.querySelectorAll(".heatmap .heat").length) === 84);
+  check("El calendario colorea los días con sesión", await page.evaluate(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.className.startsWith("heat heat-") && !c.className.includes("empty"))));
+  check("El calendario marca con ✗ los días sin sesión", await page.evaluate(() => [...document.querySelectorAll(".heat-empty")].some((c) => c.textContent.includes("✗"))));
+  check("El calendario muestra las puntadas por día al pasar el ratón", await page.evaluate(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("puntadas"))));
+  check("El calendario tiene leyenda con ✗ y ❄", await page.evaluate(() => document.querySelector(".heat-legend")?.textContent.includes("sin sesión") && document.querySelector(".heat-legend")?.textContent.includes("día congelado")));
+  await page.select(".metric-select", "minutos");
+  check("El color puede cambiar a minutos", await page.waitForFunction(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("min")), { timeout: 8000 }).then(() => true));
+  await page.select(".metric-select", "puntadas");
 
   // 6b. A1: búsqueda de proyectos en Inicio  await page.waitForSelector("#project-search");
   await page.type("#project-search", "flor");
@@ -419,10 +427,11 @@ async function main() {
   await page.waitForFunction(() => document.body.innerText.includes("Flor de lis"), { timeout: 8000 });
   check("Deshacer devuelve el proyecto a Inicio", (await text(page)).includes("Flor de lis"));
 
-  // 9. A4: recordatorio de copia y exportación real
+  // 9. A4: recordatorio de copia y exportación real (desde Configuración)
   await page.goto(URL, { waitUntil: "networkidle0" });
   await page.waitForFunction(() => document.querySelector(".backup-reminder"), { timeout: 8000 });
   check("Si no hay copia todavía, se avisa de ello", (await text(page)).includes("Todavía no has exportado ninguna copia"));
+  await clickByText(page, "Configuración");
   await clickByText(page, "Exportar copia (JSON)");
   let backupJson = "";
   for (let i = 0; i < 40 && !backupJson; i++) {
@@ -431,6 +440,8 @@ async function main() {
     else await new Promise((r) => setTimeout(r, 250));
   }
   check("La copia exportada es schemaVersion 2 y trae los datos", backupJson.includes('"schemaVersion": 2') && backupJson.includes("Olivia Rodrigo"));
+  check("Configuración confirma la copia recién exportada", await page.waitForFunction(() => document.body.innerText.includes("Última copia exportada"), { timeout: 8000 }).then(() => true));
+  await clickByText(page, "Inicio");
   check("Tras exportar, el recordatorio desaparece", await page.waitForFunction(() => !document.querySelector(".backup-reminder"), { timeout: 8000 }).then(() => true));
 
   // 10. Offline: el service worker debe servir la app sin red

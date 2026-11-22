@@ -70,10 +70,12 @@ export interface Session {
 
 /**
  * Ajustes globales de la app (A4): una única fila con clave "app".
- * `freezeDays` (C2) queda reservado para los días congelados de la racha.
+ * `freezeDays` (C2) son los días congelados de la racha; `heatMetric` es la
+ * métrica de color del calendario de racha.
  */
 export interface AppSettings {
   key: string;
   lastBackupAt?: string; // ISO de la última copia exportada
   freezeDays?: number; // 0, 1 o 2 días congelados por semana
+  heatMetric?: "puntadas" | "minutos"; // cómo se colorea el calendario
 }

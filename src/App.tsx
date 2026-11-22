@@ -5,8 +5,9 @@ import { Session } from "./screens/Session";
 import { NewProject } from "./screens/NewProject";
 import { Threads } from "./screens/Threads";
 import { Summary } from "./screens/Summary";
+import { Settings } from "./screens/Settings";
 
-type View = "home" | "project" | "session" | "new" | "threads" | "summary";
+type View = "home" | "project" | "session" | "new" | "threads" | "summary" | "settings";
 
 /**
  * Navegación mínima de la app (sin router): Inicio → Proyecto → Sesión.
@@ -47,6 +48,7 @@ export function App() {
         <button class={view === "home" ? "active" : ""} onClick={() => setView("home")}>Inicio</button>
         <button class={view === "new" ? "active" : ""} onClick={() => setView("new")}>Nuevo proyecto</button>
         <button class={view === "threads" ? "active" : ""} onClick={() => setView("threads")}>Hilos</button>
+        <button class={view === "settings" ? "active" : ""} onClick={() => setView("settings")}>Configuración</button>
       </nav>
       {undo && (
         <div class="undo-banner" role="status">
@@ -62,6 +64,7 @@ export function App() {
       {view === "summary" && projectId != null && <Summary projectId={projectId} onBack={() => setView("project")} />}
       {view === "session" && projectId != null && <Session projectId={projectId} onDone={() => setView("project")} />}
       {view === "new" && <NewProject onCreated={openProject} />}
+      {view === "settings" && <Settings />}
     </div>
   );
 }
