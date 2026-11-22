@@ -10,10 +10,12 @@ import {
   getProject,
   getProjectThreads,
   getSessions,
+  getSettings,
   insertProjectPhoto,
   listProjects,
   liveSessions,
   localISO,
+  markBackup,
   removeProjectPhoto,
   restoreProject,
   restoreSession,
@@ -275,6 +277,13 @@ describe("repo (IndexedDB simulado)", () => {
     const backup = await buildBackup();
     expect(backup.projects).toHaveLength(0);
     expect(backup.sessions).toHaveLength(0);
+  });
+
+  it("A4: al exportar la copia queda registrada su fecha", async () => {
+    const s = await markBackup();
+    expect(s.key).toBe("app");
+    expect(s.lastBackupAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect((await getSettings())?.lastBackupAt).toBe(s.lastBackupAt);
   });
 
   it("decisión #16: una copia de v1 se restaura en la app de v2", async () => {

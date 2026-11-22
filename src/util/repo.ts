@@ -1,5 +1,5 @@
 import { db } from "../db";
-import type { MediaLog, Project, ProjectThread, Session, SessionEntry, Thread } from "../types";
+import type { AppSettings, MediaLog, Project, ProjectThread, Session, SessionEntry, Thread } from "../types";
 import { isThreadComplete, threadProgress, threadSpoolsUsed } from "./progress";
 
 /**
@@ -106,6 +106,18 @@ export async function listProjects(): Promise<Project[]> {
 export async function liveSessions(): Promise<Session[]> {
   const liveIds = new Set((await listProjects()).map((p) => p.id!));
   return (await db.sessions.toArray()).filter((s) => !s.deletedAt && liveIds.has(s.projectId));
+}
+
+/** Ajustes globales (A4): una única fila con clave "app". */
+export async function getSettings(): Promise<AppSettings | undefined> {
+  return db.settings.get("app");
+}
+
+/** Registrar que se ha exportado una copia de seguridad (A4). */
+export async function markBackup(): Promise<AppSettings> {
+  const s: AppSettings = { key: "app", ...(await getSettings()), lastBackupAt: localISO() };
+  await db.settings.put(s);
+  return s;
 }
 
 export async function getProject(id: number): Promise<Project | undefined> {

@@ -331,7 +331,21 @@ async function main() {
   await page.waitForFunction(() => document.body.innerText.includes("Flor de lis"), { timeout: 8000 });
   check("Deshacer devuelve el proyecto a Inicio", (await text(page)).includes("Flor de lis"));
 
-  // 7. Offline: el service worker debe servir la app sin red
+  // 9. A4: recordatorio de copia y exportación real
+  await page.goto(URL, { waitUntil: "networkidle0" });
+  await page.waitForFunction(() => document.querySelector(".backup-reminder"), { timeout: 8000 });
+  check("Si no hay copia todavía, se avisa de ello", (await text(page)).includes("Todavía no has exportado ninguna copia"));
+  await clickByText(page, "Exportar copia (JSON)");
+  let backupJson = "";
+  for (let i = 0; i < 40 && !backupJson; i++) {
+    const jsons = readdirSync(DL).filter((f) => f.endsWith(".json"));
+    if (jsons.length) backupJson = readFileSync(`${DL}/${jsons[0]}`, "utf8");
+    else await new Promise((r) => setTimeout(r, 250));
+  }
+  check("La copia exportada es schemaVersion 2 y trae los datos", backupJson.includes('"schemaVersion": 2') && backupJson.includes("Olivia Rodrigo"));
+  check("Tras exportar, el recordatorio desaparece", await page.waitForFunction(() => !document.querySelector(".backup-reminder"), { timeout: 8000 }).then(() => true));
+
+  // 10. Offline: el service worker debe servir la app sin red
   await page.goto(URL, { waitUntil: "networkidle0" }); // deja los assets en caché
   await page.setOfflineMode(true);
   try {

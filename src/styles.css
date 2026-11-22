@@ -42,6 +42,7 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 
 .undo-banner { background: var(--card); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; display: flex; gap: 10px; align-items: center; }
 .btn.danger { color: #b03030; border-color: #b03030; }
+.backup-reminder { background: #fdf3e3; border: 1px solid #d9a441; border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
 .minis { display: flex; gap: 10px; flex-wrap: wrap; }
 /* A1: búsqueda en Inicio */
 .search { margin: 10px 0 14px; }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import type { Project, Session } from "../types";
-import { listProjects, liveSessions } from "../util/repo";
+import type { AppSettings, Project, Session } from "../types";
+import { listProjects, liveSessions, getSettings, markBackup } from "../util/repo";
 import {
   episodesThisMonth,
   localDay,
@@ -22,12 +22,14 @@ export function Home({
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [settings, setSettings] = useState<AppSettings | undefined>();
   const [msg, setMsg] = useState("");
   const [query, setQuery] = useState("");
 
   async function refresh() {
     setProjects(await listProjects());
     setSessions(await liveSessions());
+    setSettings(await getSettings());
   }
   useEffect(() => {
     refresh();
@@ -63,6 +65,12 @@ export function Home({
   }
   const topSeries = [...seriesCount.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
 
+  // A4: aviso si la copia de seguridad no existe o es de hace más de 14 días.
+  const daysSince = settings?.lastBackupAt
+    ? Math.floor((Date.now() - Date.parse(settings.lastBackupAt)) / 86400000)
+    : 0;
+  const backupStale = !settings?.lastBackupAt || daysSince > 14;
+
   async function exportJson() {
     const backup = await buildBackup();
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -71,6 +79,8 @@ export function Home({
     a.download = `bordes-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    await markBackup();
+    setSettings(await getSettings());
     setMsg("Copia de seguridad descargada.");
   }
 
@@ -186,6 +196,13 @@ export function Home({
           <input type="file" accept="application/json" onChange={(e) => e.target.files && importJson(e.target.files[0])} />
         </label>
       </div>
+      {backupStale && (
+        <p class="backup-reminder">
+          {settings?.lastBackupAt
+            ? `La última copia de seguridad es de hace ${daysSince} días: exporta una para no perder datos.`
+            : "Todavía no has exportado ninguna copia de seguridad. Descarga una de vez en cuando: los datos solo viven en este navegador."}
+        </p>
+      )}
       {msg && <p class="msg">{msg}</p>}
     </section>
   );
