@@ -83,6 +83,8 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .search { margin: 10px 0 14px; }
 .search input { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--ink); border-radius: 8px; background: var(--card); }
 .mini { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px; min-width: 180px; font: inherit; cursor: pointer; }
+.mini-thumb { display: block; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
+.mini-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .mini-num { display: block; margin-top: 4px; font-size: 0.9em; color: var(--muted); }
 .media-hint { font-size: 0.85em; color: var(--muted); }
 

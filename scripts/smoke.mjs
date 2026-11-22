@@ -223,6 +223,9 @@ async function main() {
   check("El calendario tiene leyenda con ✗ y ❄", await page.evaluate(() => document.querySelector(".heat-legend")?.textContent.includes("sin sesión") && document.querySelector(".heat-legend")?.textContent.includes("día congelado")));
   await page.select(".metric-select", "minutos");
   check("El color puede cambiar a minutos", await page.waitForFunction(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("min")), { timeout: 8000 }).then(() => true));
+  await page.reload({ waitUntil: "networkidle0" });
+  await page.waitForSelector(".metric-select");
+  check("La métrica del calendario se recuerda al recargar", await page.evaluate(() => document.querySelector(".metric-select").value === "minutos"));
   await page.select(".metric-select", "puntadas");
 
   // 6b. A1: búsqueda de proyectos en Inicio  await page.waitForSelector("#project-search");
@@ -410,7 +413,13 @@ async function main() {
   await clickByText(page, "Inicio");
   await page.waitForFunction(() => document.body.innerText.includes("Terminados"), { timeout: 8000 });
   t = await text(page);
-  check("Los terminados aparecen en su propia sección", t.includes("Terminados") && t.includes("Olivia Rodrigo"));
+  check("Los terminados aparecen en su propia sección", t.includes("Terminados"));
+  check("Un terminado con foto del diseño se muestra como miniatura sin nombre", await page.evaluate(() => {
+    const h3 = [...document.querySelectorAll("h3")].find((h) => h.textContent === "Terminados");
+    const section = h3?.nextElementSibling;
+    const card = section?.querySelector(".mini");
+    return !!card?.querySelector(".mini-thumb img") && !card.querySelector(".mini-name");
+  }));
   check("El hero pasa a ser el proyecto activo restante", await page.evaluate(() => document.querySelector(".hero-card").textContent.includes("Flor de lis")));
 
   // 8c. A3: eliminar un proyecto y deshacerlo
@@ -453,7 +462,7 @@ async function main() {
     /* la navegación puede fallar; comprobamos el DOM igualmente */
   }
   t = await page.evaluate(() => document.body.innerText);
-  check("Funciona offline (PWA + IndexedDB)", t.includes("Olivia Rodrigo"));
+  check("Funciona offline (PWA + IndexedDB)", t.includes("Terminados") && t.includes("Flor de lis"));
   await page.setOfflineMode(false);
 
   await browser.close();

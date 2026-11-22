@@ -23,14 +23,14 @@ export function Home({
 }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [settings, setSettings] = useState<AppSettings | undefined>();
+  const [settings, setShown] = useState<AppSettings | undefined>();
   const [msg, setMsg] = useState("");
   const [query, setQuery] = useState("");
 
   async function refresh() {
     setProjects(await listProjects());
     setSessions(await liveSessions());
-    setSettings(await getSettings());
+    setShown(await getSettings());
   }
   useEffect(() => {
     refresh();
@@ -44,12 +44,17 @@ export function Home({
   const results = q ? projects.filter((p) => p.name.toLowerCase().includes(q)) : [];
 
   /** Miniatura de proyecto (usada en "activos", "terminados" y resultados). */
-  function mini(p: Project) {
+  function mini(p: Project, finished = false) {
     const done = projectStitchesDone(sessions, p.id!);
     const pct = Math.round((done / Math.max(1, p.totalStitches)) * 100);
+    const thumb = finished && p.photos?.length ? p.photos[0] : null;
     return (
-      <button class="mini" key={p.id} onClick={() => onOpenProject(p.id!)}>
-        <span class="mini-name">{p.name}</span>
+      <button class="mini" key={p.id} onClick={() => onOpenProject(p.id!)} title={p.name}>
+        {thumb ? (
+          <span class="mini-thumb"><img src={thumb} alt={p.name} /></span>
+        ) : (
+          <span class="mini-name">{p.name}</span>
+        )}
         <span class="mini-num">{done} / {p.totalStitches}</span>
         <div class="progress"><div class="progress-fill" style={{ width: `${pct}%` }} /></div>
       </button>
@@ -223,7 +228,7 @@ export function Home({
           {finished.length > 0 && (
             <>
               <h3>Terminados</h3>
-              <div class="minis">{finished.map(mini)}</div>
+              <div class="minis">{finished.map((p) => mini(p, true))}</div>
             </>
           )}
         </>
