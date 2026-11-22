@@ -56,6 +56,7 @@ async function main() {
   check("El import detecta la rejilla 3×4 (12 celdas) y 9 puntadas reales", t.includes("Importado: rejilla 3×4 = 12 celdas (9 puntadas), 3 colores, imagen incluida."));
   check("La tabla de colores se rellena (3 filas)", await page.evaluate(() => document.querySelectorAll(".colors tbody tr").length) === 3);
   check("Cada color importado trae un selector de hilo", await page.evaluate(() => document.querySelectorAll(".colors .color-thread").length) === 3);
+  check("El aviso de descuadre es llamativo (12 ≠ 9, faltan 3)", await page.evaluate(() => !!document.querySelector(".mismatch") && document.querySelector(".mismatch").textContent.includes("Faltan 3 puntadas")));
   check("El total precargado es la rejilla completa (12)", await page.evaluate(() => document.querySelector("#project-total").value) === "12");
   await clickByText(page, "Crear proyecto");
   await page.waitForSelector(".project-head");
@@ -70,9 +71,11 @@ async function main() {
   await clickByText(page, "Inicio");
   await clickByText(page, "Nuevo proyecto");
   await page.waitForSelector("#project-name");
+  check("Los campos numéricos empiezan vacíos para que el 0 no se pegue", await page.evaluate(() => document.querySelector("#project-total").value === "" && document.querySelector(".color-total").value === ""));
   await page.type("#project-name", "Olivia Rodrigo");
   await page.type("#project-total", "3025");
   await page.type(".color-total", "2615");
+  check("El descuadre se avisa con fuerza (3025 ≠ 2615, faltan 410)", await page.waitForFunction(() => document.querySelector(".mismatch")?.textContent.includes("Faltan 410 puntadas"), { timeout: 8000 }).then(() => true));
 
   // 3b. C1: al escribir un código DMC se autocompletan nombre y color
   const dmcEl = await page.$(".color-dmc");
@@ -101,9 +104,11 @@ async function main() {
   // 3. Sesión con puntadas y media
   await clickByText(page, "Empezar sesión");
   await page.waitForSelector(".counter-row");
+  check("El contador de puntadas empieza vacío (placeholder 0)", await page.evaluate(() => document.querySelector(".counter-row input[type=number]").value === ""));
   await page.type(".timer input[type=number]", "45");
   await page.type(".counter-row input[type=number]", "150");
   await page.select(".media select", "serie");
+  check("El cuadro de episodios va etiquetado", await page.evaluate(() => document.querySelector(".media .eps span")?.textContent === "Episodios vistos"));
   await page.waitForSelector('.media input[type="text"]');
   await page.type('.media input[type="text"]', "Friends");
   await page.type('.media input[type="number"]', "2");
@@ -138,10 +143,15 @@ async function main() {
   await page.waitForSelector(".replace-edit input");
   await page.evaluate(() => document.querySelector(".replace-edit input").select());
   await page.type(".replace-edit input", "Crema 752");
+  const replaceDmcEl = await page.$(".replace-edit input:nth-of-type(2)");
+  await replaceDmcEl.evaluate((e) => e.select());
+  await replaceDmcEl.focus();
+  await page.keyboard.type("752");
   await clickByText(page, "Guardar reemplazo");
   await page.waitForFunction(() => document.body.innerText.includes("Crema 752"), { timeout: 8000 });
   t = await text(page);
   check("El hilo marca a qué color teórico reemplaza", t.includes("reemplaza a “Crema 752”"));
+  check("El reemplazo también guarda el número/DMC del hilo teórico", t.includes("DMC 752"));
 
   // 4b. Resumen final del proyecto (estamos en la página de Olivia)
   await clickByText(page, "Ver resumen");
@@ -198,6 +208,27 @@ async function main() {
     { timeout: 8000 }
   );
 
+  // Punto 3 (feedback): los hilos guardados se editan enteros, no solo las bobinas
+  await (await threadHandle.$(".lib-edit")).click();
+  await page.waitForSelector(".thread-edit-form");
+  const libNameInput = await page.$('.thread-edit-form input[type="text"]');
+  await libNameInput.evaluate((e) => e.select());
+  await libNameInput.focus();
+  await page.keyboard.type("Pearl Gray sedoso");
+  await (await threadHandle.$(".thread-edit-form .btn")).click();
+  check(
+    "Punto 3: un hilo guardado se puede renombrar desde la biblioteca",
+    await page.waitForFunction(() => document.body.innerText.includes("Pearl Gray sedoso"), { timeout: 8000 }).then(() => true)
+  );
+
+  // Punto 7 (feedback): al crear un proyecto, el selector de hilo lista la biblioteca
+  await clickByText(page, "Nuevo proyecto");
+  await page.waitForSelector(".color-thread");
+  check(
+    "Punto 7: 'Hilo a usar' ofrece los hilos ya guardados, no solo 'Nuevo: X'",
+    await page.waitForFunction(() => [...document.querySelectorAll(".color-thread option")].some((o) => o.textContent.includes("Pearl Gray sedoso")), { timeout: 8000 }).then(() => true)
+  );
+
   // 6. Home: widgets
   await clickByText(page, "Inicio");
   await page.waitForSelector(".widgets");
@@ -221,6 +252,7 @@ async function main() {
   check("El calendario marca con ✗ los días sin sesión", await page.evaluate(() => [...document.querySelectorAll(".heat-empty")].some((c) => c.textContent.includes("✗"))));
   check("El calendario muestra las puntadas por día al pasar el ratón", await page.evaluate(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("puntadas"))));
   check("El calendario tiene leyenda con ✗ y ❄", await page.evaluate(() => document.querySelector(".heat-legend")?.textContent.includes("sin sesión") && document.querySelector(".heat-legend")?.textContent.includes("día congelado")));
+  check("El contador ❄ indica los descansos que quedan esta semana", await page.evaluate(() => document.querySelector(".freeze-left")?.textContent.includes("de 1 quedan esta semana")));
   await page.select(".metric-select", "minutos");
   check("El color puede cambiar a minutos", await page.waitForFunction(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("min")), { timeout: 8000 }).then(() => true));
   await page.reload({ waitUntil: "networkidle0" });
@@ -255,18 +287,20 @@ async function main() {
   check("El proyecto refleja las bobinas editadas menos la gastada", t.includes("2 bobinas") && t.includes("1 gastada"));
   check("El reemplazo sobrevive a la recarga", t.includes("Crema 752"));
 
-  // 7b. Apuntes, regalo y fotos del proceso
+  // 7b. Apuntes inline bajo el nombre (se autosavan) y fotos del proceso
   await page.waitForSelector(".project-notes");
-  await page.type(".project-notes", "hilo doble en las esquinas");
-  await page.type(".meta input[type=text]", "Marta");
-  await clickByText(page, "Guardar apuntes");
-  await page.waitForFunction(() => document.body.innerText.includes("Para regalar a Marta"), { timeout: 8000 });
-  t = await text(page);
   check(
-    "Los apuntes se guardan y se ven en el proyecto",
+    "Los apuntes se editan bajo el nombre, sin formulario aparte",
+    await page.evaluate(() => !!document.querySelector(".inline-notes .project-notes") && !document.querySelector(".form.meta"))
+  );
+  check("El proyecto muestra su fecha de inicio", (await text(page)).includes("Iniciado el"));
+  await page.type(".project-notes", "hilo doble en las esquinas");
+  await page.evaluate(() => document.querySelector(".project-notes").blur());
+  await page.waitForFunction(() => document.querySelector(".saved")?.textContent.includes("guardado"), { timeout: 8000 });
+  check(
+    "Los apuntes se autosavan al salir del campo",
     await page.evaluate(() => document.querySelector(".project-notes").value.includes("hilo doble en las esquinas"))
   );
-  check("El regalo se edita desde la página del proyecto", t.includes("Para regalar a Marta"));
 
   await page.evaluate(async () => {
     const canvas = document.createElement("canvas");
@@ -289,8 +323,11 @@ async function main() {
     })
   );
 
-  // 7c. Editar una sesión ya guardada
-  await clickByText(page, "editar");
+  // 7c. Editar una sesión ya guardada (el botón "editar" de la sesión, no "editar hilo")
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll("p button.linklike")].find((b) => b.textContent.trim() === "editar");
+    btn.click();
+  });
   await page.waitForSelector(".session-edit");
   const nums = await page.$$(".session-edit .counter-row input[type=number]");
   await nums[0].evaluate((e) => e.select());
@@ -367,6 +404,10 @@ async function main() {
     { timeout: 8000 },
   );
   check("D1: el aviso recuerda cuántas veces se ha visto la serie", true);
+  check(
+    "D1: el aviso recuerda también los episodios vistos la última vez",
+    await page.waitForFunction(() => document.querySelector(".quick-session .media-hint")?.textContent.includes("2 eps"), { timeout: 8000 }).then(() => true)
+  );
 
   await clickByText(page, "Guardar sesión rápida");
   await page.waitForFunction(() => document.body.innerText.includes("225 / 3025"), { timeout: 8000 });
@@ -410,6 +451,7 @@ async function main() {
   await clickByText(page, "Marcar terminado");
   await page.waitForFunction(() => document.body.innerText.includes("Reabrir"), { timeout: 8000 });
   check("Al terminar el proyecto, el botón permite reabrirlo", (await text(page)).includes("Reabrir"));
+  check("Punto 9: un proyecto terminado muestra su fecha de fin", (await text(page)).includes("Terminado el"));
   await clickByText(page, "Inicio");
   await page.waitForFunction(() => document.body.innerText.includes("Terminados"), { timeout: 8000 });
   t = await text(page);

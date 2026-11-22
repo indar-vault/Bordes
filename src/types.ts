@@ -42,6 +42,10 @@ export interface Project {
   notes: string;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  /** Fecha en la que se empezó el proyecto (por defecto, el día de creación). */
+  startDate?: string; // ISO
+  /** Fecha en la que se marcó como terminado. */
+  finishedAt?: string; // ISO
   /** Borrado suave (A3): se puede deshacer hasta purgar con una copia. */
   deletedAt?: string;
 }

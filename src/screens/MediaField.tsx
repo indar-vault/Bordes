@@ -51,19 +51,23 @@ export function MediaField({
             placeholder="Nombre"
           />
           {type === "serie" && (
-            <input
-              type="number"
-              value={episodes}
-              onChange={(e) => setEpisodes(Number(e.target.value))}
-              min={0}
-              placeholder={known?.lastEpisodes ? `eps (última: ${known.lastEpisodes})` : "Episodios"}
-              style={{ width: 110 }}
-            />
+            <label class="eps">
+              <span>Episodios vistos</span>
+              <input
+                type="number"
+                value={episodes}
+                onChange={(e) => setEpisodes(Number(e.target.value))}
+                min={0}
+                placeholder={known?.lastEpisodes ? `última: ${known.lastEpisodes}` : "0"}
+                style={{ width: 110 }}
+              />
+            </label>
           )}
           {known ? (
             <span class="media-hint">
-              vista {known.count} {known.count === 1 ? "vez" : "veces"} · última el{" "}
-              {known.lastDate.slice(0, 10)}
+              vista {known.count} {known.count === 1 ? "vez" : "veces"}
+              {type === "serie" && known.lastEpisodes ? ` (última vez: ${known.lastEpisodes} eps)` : ""} ·
+              última el {known.lastDate.slice(0, 10)}
             </span>
           ) : titles.length > 0 ? (
             <span class="media-hint">

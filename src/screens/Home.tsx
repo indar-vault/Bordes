@@ -3,6 +3,7 @@ import type { AppSettings, Project, Session } from "../types";
 import { listProjects, liveSessions, getSettings, setSettings } from "../util/repo";
 import {
   episodesThisMonth,
+  freezeLeft,
   heatLevel,
   heatmap,
   localDay,
@@ -80,6 +81,7 @@ export function Home({
   // C2: días de descanso por semana (0 = comportamiento clásico).
   const freezeDays = settings?.freezeDays ?? 0;
   const racha = streakInfo(sessions, new Date(), freezeDays);
+  const freezesLeft = freezeLeft(sessions, freezeDays, new Date());
 
   // B2: calendario de racha de las últimas 12 semanas.
   const metric = settings?.heatMetric ?? "puntadas";
@@ -168,6 +170,11 @@ export function Home({
           <div class="calendar">
             <div class="calendar-head">
               <h2>Calendario de racha</h2>
+              {freezeDays > 0 && (
+                <span class="freeze-left" title={`Descansos semanales: puedes fallar ${freezeDays} día(s) sin romper la racha`}>
+                  ❄ {freezesLeft} de {freezeDays} quedan esta semana
+                </span>
+              )}
               <label class="metric">
                 color según
                 <select

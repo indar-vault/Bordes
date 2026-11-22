@@ -13,6 +13,8 @@ export function Threads() {
   const [usage, setUsage] = useState<Record<number, string[]>>({});
   const [form, setForm] = useState({ color: "#ffffff", name: "", dmc: "", spools: 1 });
   const [msg, setMsg] = useState("");
+  const [editing, setEditing] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ color: "#ffffff", name: "", dmc: "", spools: 1 });
 
   async function refresh() {
     setThreads(await listThreads());
@@ -46,6 +48,17 @@ export function Threads() {
     await refresh();
   }
 
+  async function saveThread(t: Thread) {
+    await updateThread(t.id!, {
+      name: editForm.name.trim() || t.name,
+      dmc: editForm.dmc.trim() || undefined,
+      color: editForm.color,
+      spools: Math.max(0, Number(editForm.spools)),
+    });
+    setEditing(null);
+    await refresh();
+  }
+
   return (
     <section class="screen">
       <h1>Biblioteca de hilos</h1>
@@ -68,22 +81,44 @@ export function Threads() {
         {threads.map((t) => (
           <li key={t.id} class="thread" style={{ "--c": t.color } as React.CSSProperties}>
             <span class="spool" aria-hidden="true">●</span>
-            <span class="thread-name">
-              {t.name} <small>DMC {t.dmc || "—"}</small>
-            </span>
-            <label class="spools">
-              Bobinas
-              <input
-                class="lib-spools"
-                type="number"
-                value={t.spools}
-                min={0}
-                style={{ width: 60 }}
-                onChange={(e) => setThreads((ts) => ts.map((x) => (x.id === t.id ? { ...x, spools: Number(e.target.value) } : x)))}
-              />
-            </label>
-            <button class="btn ghost lib-save" onClick={() => saveSpools(t)}>Guardar</button>
-            <small class="usage">{(usage[t.id!] ?? []).join(", ") || "sin uso"}</small>
+            {editing === t.id ? (
+              <span class="thread-edit-form">
+                <input type="color" value={editForm.color} onChange={(e) => setEditForm({ ...editForm, color: e.target.value })} />
+                <input type="text" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nombre" />
+                <input type="text" value={editForm.dmc} onChange={(e) => setEditForm({ ...editForm, dmc: e.target.value, ...dmcAutoFill(editForm.name, e.target.value) })} placeholder="DMC" style={{ width: 70 }} />
+                <input type="number" value={editForm.spools} onChange={(e) => setEditForm({ ...editForm, spools: Number(e.target.value) })} min={0} style={{ width: 60 }} />
+                <button class="btn ghost" onClick={() => saveThread(t)}>Guardar</button>
+                <button class="linklike" onClick={() => setEditing(null)}>cancelar</button>
+              </span>
+            ) : (
+              <>
+                <span class="thread-name">
+                  {t.name} <small>DMC {t.dmc || "—"}</small>
+                </span>
+                <label class="spools">
+                  Bobinas
+                  <input
+                    class="lib-spools"
+                    type="number"
+                    value={t.spools}
+                    min={0}
+                    style={{ width: 60 }}
+                    onChange={(e) => setThreads((ts) => ts.map((x) => (x.id === t.id ? { ...x, spools: Number(e.target.value) } : x)))}
+                  />
+                </label>
+                <button class="btn ghost lib-save" onClick={() => saveSpools(t)}>Guardar</button>
+                <button
+                  class="btn ghost lib-edit"
+                  onClick={() => {
+                    setEditing(t.id);
+                    setEditForm({ color: t.color, name: t.name, dmc: t.dmc ?? "", spools: t.spools });
+                  }}
+                >
+                  Editar
+                </button>
+                <small class="usage">{(usage[t.id!] ?? []).join(", ") || "sin uso"}</small>
+              </>
+            )}
           </li>
         ))}
       </ul>

@@ -18,7 +18,10 @@ import {
   setReplacement,
   swapProjectThread,
   updateProject,
+  updateProjectThread,
   updateSession,
+  updateThread,
+  localISO,
   type ThreadView,
 } from "../util/repo";
 import { projectStitchesDone, sessionSpools, sessionsByDate } from "../util/progress";
@@ -48,9 +51,10 @@ export function Project({
   const [newColor, setNewColor] = useState({ color: "#ffffff", name: "", dmc: "", spools: 1, totalStitches: 0 });
   const [library, setLibrary] = useState<Thread[]>([]);
   const [editingReplace, setEditingReplace] = useState<number | null>(null);
-  const [plannedName, setPlannedName] = useState("");
+  const [replaceForm, setReplaceForm] = useState({ name: "", dmc: "" });
+  const [editingThread, setEditingThread] = useState<number | null>(null);
+  const [threadForm, setThreadForm] = useState({ name: "", dmc: "", spools: 1, totalStitches: 0 });
   const [notes, setNotes] = useState("");
-  const [giftTo, setGiftTo] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
   const [editingSession, setEditingSession] = useState<Session | null>(null);
   const [mediaHist, setMediaHist] = useState<MediaSuggestion[]>([]);
@@ -59,7 +63,6 @@ export function Project({
     const p = await getProject(projectId);
     setProject(p);
     setNotes(p?.notes ?? "");
-    setGiftTo(p?.giftTo ?? "");
     setThreads(await getProjectThreads(projectId));
     setSessions(await getSessions(projectId));
     setLibrary(await listThreads());
@@ -82,13 +85,18 @@ export function Project({
   }
 
   async function toggleStatus() {
-    await updateProject(projectId, { status: project?.status === "activo" ? "terminado" : "activo" });
+    const finishing = project?.status === "activo";
+    await updateProject(projectId, {
+      status: finishing ? "terminado" : "activo",
+      finishedAt: finishing ? localISO() : undefined,
+    });
     await refresh();
   }
 
-  async function saveNotes(e: React.FormEvent) {
-    e.preventDefault();
-    await updateProject(projectId, { notes: notes.trim(), giftTo: giftTo.trim() || undefined });
+  async function autosaveNotes() {
+    const trimmed = notes.trim();
+    if (trimmed === (project?.notes ?? "")) return;
+    await updateProject(projectId, { notes: trimmed });
     setNotesSaved(true);
     setTimeout(() => setNotesSaved(false), 2000);
     await refresh();
@@ -160,6 +168,21 @@ export function Project({
           <p>{done} / {project?.totalStitches ?? 0} puntadas ({pct}%)</p>
           <p>{colorsDone} / {threads.length} colores completados</p>
           {project?.giftTo && <p class="gift">Para regalar a {project.giftTo}</p>}
+          <p class="dates">
+            Iniciado el {(project?.startDate ?? project?.createdAt ?? "").slice(0, 10)}
+            {project?.finishedAt ? ` · Terminado el ${project.finishedAt.slice(0, 10)}` : ""}
+          </p>
+          <label class="inline-notes">
+            <textarea
+              class="project-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={autosaveNotes}
+              rows={2}
+              placeholder="Apuntes: trucos, cómo lo bordas…"
+            />
+            {notesSaved && <span class="saved">✓ guardado</span>}
+          </label>
           <div class="row">
             <button class="btn" onClick={() => onStartSession(projectId)}>▶ Empezar sesión</button>
             <button class="btn ghost" onClick={() => onOpenSummary(projectId)}>Ver resumen</button>
@@ -226,25 +249,6 @@ export function Project({
           label="Mientras bordabas…"
         />
         <button class="btn" type="submit">Guardar sesión rápida</button>
-      </form>
-
-      <form class="form meta" onSubmit={saveNotes}>
-        <label>
-          Apuntes del proyecto
-          <textarea
-            class="project-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-            placeholder="Notas: cómo lo bordas, trucos, qué aprendiste…"
-          />
-        </label>
-        <label>
-          ¿Es un regalo?
-          <input type="text" value={giftTo} onChange={(e) => setGiftTo(e.target.value)} placeholder="Para regalar a…" />
-        </label>
-        <button class="btn ghost" type="submit">Guardar apuntes</button>
-        {notesSaved && <span class="saved">Guardado</span>}
       </form>
 
       <h2>Fotos del proceso</h2>
@@ -315,7 +319,10 @@ export function Project({
               class="linklike"
               onClick={() => {
                 setEditingReplace(t.pt.id!);
-                setPlannedName(t.pt.isReplacement ? t.pt.plannedName : t.thread.name);
+                setReplaceForm({
+                  name: t.pt.isReplacement ? t.pt.plannedName : t.thread.name,
+                  dmc: t.pt.isReplacement ? t.pt.plannedDmc ?? "" : t.thread.dmc ?? "",
+                });
               }}
             >
               {t.pt.isReplacement ? `reemplaza a “${t.pt.plannedName}”` : "¿reemplaza a…?"}
@@ -324,14 +331,21 @@ export function Project({
               <span class="replace-edit">
                 <input
                   type="text"
-                  value={plannedName}
-                  onChange={(e) => setPlannedName(e.target.value)}
+                  value={replaceForm.name}
+                  onChange={(e) => setReplaceForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Hilo teórico del patrón"
+                />
+                <input
+                  type="text"
+                  value={replaceForm.dmc}
+                  onChange={(e) => setReplaceForm((f) => ({ ...f, dmc: e.target.value }))}
+                  placeholder="DMC"
+                  style={{ width: 70 }}
                 />
                 <button
                   class="btn ghost"
                   onClick={async () => {
-                    await setReplacement(t.pt.id!, plannedName.trim() === t.thread.name ? null : plannedName);
+                    await setReplacement(t.pt.id!, replaceForm.name, replaceForm.dmc);
                     setEditingReplace(null);
                     await refresh();
                   }}
@@ -339,6 +353,67 @@ export function Project({
                   Guardar reemplazo
                 </button>
                 <button class="linklike" onClick={() => setEditingReplace(null)}>cancelar</button>
+              </span>
+            )}
+            <button
+              class="linklike thread-edit-btn"
+              onClick={() => {
+                setEditingThread(t.pt.id!);
+                setThreadForm({
+                  name: t.thread.name,
+                  dmc: t.thread.dmc ?? "",
+                  spools: t.thread.spools,
+                  totalStitches: t.pt.totalStitches,
+                });
+              }}
+            >
+              editar hilo
+            </button>
+            {editingThread === t.pt.id && (
+              <span class="thread-edit-form">
+                <input
+                  type="text"
+                  value={threadForm.name}
+                  onChange={(e) => setThreadForm((f) => ({ ...f, name: e.target.value }))}
+                  placeholder="Nombre"
+                />
+                <input
+                  type="text"
+                  value={threadForm.dmc}
+                  onChange={(e) => setThreadForm((f) => ({ ...f, dmc: e.target.value }))}
+                  placeholder="DMC"
+                  style={{ width: 70 }}
+                />
+                <input
+                  type="number"
+                  value={threadForm.spools}
+                  onChange={(e) => setThreadForm((f) => ({ ...f, spools: Number(e.target.value) }))}
+                  min={0}
+                  style={{ width: 60 }}
+                />
+                <input
+                  type="number"
+                  value={threadForm.totalStitches}
+                  onChange={(e) => setThreadForm((f) => ({ ...f, totalStitches: Number(e.target.value) }))}
+                  min={0}
+                  style={{ width: 80 }}
+                />
+                <button
+                  class="btn ghost"
+                  onClick={async () => {
+                    await updateThread(t.thread.id!, {
+                      name: threadForm.name.trim() || t.thread.name,
+                      dmc: threadForm.dmc.trim() || undefined,
+                      spools: Math.max(0, threadForm.spools),
+                    });
+                    await updateProjectThread(t.pt.id!, { totalStitches: Math.max(0, threadForm.totalStitches) });
+                    setEditingThread(null);
+                    await refresh();
+                  }}
+                >
+                  Guardar
+                </button>
+                <button class="linklike" onClick={() => setEditingThread(null)}>cancelar</button>
               </span>
             )}
           </li>
