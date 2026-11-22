@@ -20,7 +20,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          BASE_PATH: /Bordes/
+          BASE_PATH: /Bordes-v2/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
