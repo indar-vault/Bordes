@@ -100,7 +100,15 @@ async function main() {
   await clickByText(page, "Deshacer");
   await page.waitForFunction(() => document.body.innerText.includes("175 / 3025"), { timeout: 8000 });
 
-  // 5b. Marcar Olivia como terminado (A1: sección Terminados)
+  // 5b. D1: autocompletado de lo ya visto (Friends se apuntó en la sesión 2)
+  await page.waitForSelector(".quick-session .media select");
+  await page.select(".quick-session .media select", "serie");
+  await page.waitForSelector(".quick-session .media input[type=text]");
+  await page.type(".quick-session .media input[type=text]", "Frien");
+  await page.waitForFunction(() => document.querySelector(".quick-session .media-hint"), { timeout: 8000 });
+  await page.screenshot({ path: `${OUT}/07-media-historial.png`, fullPage: true });
+
+  // 5c. Marcar Olivia como terminado (A1: sección Terminados)
   await clickByText(page, "Marcar terminado");
   await page.waitForFunction(() => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Reabrir")), { timeout: 8000 });
 
