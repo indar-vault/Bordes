@@ -235,8 +235,8 @@ export function Home({
       {backupStale && (
         <p class="backup-reminder">
           {settings?.lastBackupAt
-            ? `La última copia de seguridad es de hace ${daysSince} días: exporta una para no perder datos.`
-            : "Todavía no has exportado ninguna copia de seguridad. Descarga una de vez en cuando: los datos solo viven en este navegador."}
+            ? `La última copia de seguridad es de hace ${daysSince} días: exporta otra desde Configuración para no perder datos.`
+            : "Todavía no has exportado ninguna copia de seguridad. Descarga una desde Configuración de vez en cuando: los datos solo viven en este navegador."}
         </p>
       )}
       {msg && <p class="msg">{msg}</p>}
