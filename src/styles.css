@@ -68,8 +68,8 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
   --heat-js-color-white: var(--ink);
   --heat-js-spacing: 8px;
   --heat-js-spacing-font-size: 12px;
-  --heat-js-day-size: 30px;
-  --heat-js-day-spacing: 3px;
+  --heat-js-day-size: 32px;
+  --heat-js-day-spacing: 4px;
   --heat-js-border-radius-day: 6px;
   --heat-js-border-size-day: 1px;
   --heat-js-day-background-color: #f0ece7;
@@ -95,6 +95,17 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
   --heat-js-tooltip-text-color: #fff;
   margin-top: 10px;
 }
+/*
+  Heat.js reparte los meses en bloques de ancho fijo y apoya la rejilla en el
+  borde izquierdo de la tarjeta: los nombres quedan pegados a la izquierda de
+  sus días y sobra espacio a la derecha. Se centra cada nombre sobre su mes,
+  se separan los meses y la rejilla se centra dentro de la tarjeta.
+*/
+.bordes-heat .map-contents { display: flex; justify-content: center; }
+.bordes-heat .months { justify-content: center; gap: 20px; }
+.bordes-heat .months div.month { flex: 0 0 auto; }
+.bordes-heat .months div.month div.month-name { text-align: center !important; }
+.bordes-heat .months div.month div.day-columns { justify-content: flex-start; }
 .bordes-heat.heat-js .guide { display: none; }
 .bordes-heat .day .count { font-size: 11px; }
 /* Días sin sesión: una ✗ discreta. Días congelados: ❄ sobre la escarcha. */

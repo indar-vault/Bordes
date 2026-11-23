@@ -255,6 +255,24 @@ async function main() {
   check("El calendario Heat.js muestra tres meses", await page.evaluate(() => document.querySelectorAll(".bordes-heat .month").length) === 3);
   check("El calendario tiene los días de la semana en español", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day-name")].map((d) => d.textContent).join(" ") === "Lun Mar Mié Jue Vie Sáb Dom"));
   check("Cada mes aparece con su nombre", await page.evaluate(() => document.querySelectorAll(".bordes-heat .month-name").length) === 3);
+  check("El nombre de cada mes queda centrado sobre sus días", await page.evaluate(() =>
+    [...document.querySelectorAll(".bordes-heat .month")].every((m) => {
+      const name = m.querySelector(".month-name")?.getBoundingClientRect();
+      const cols = [...m.querySelectorAll(".day-column")];
+      const left = cols[0]?.getBoundingClientRect().left;
+      const right = cols[cols.length - 1]?.getBoundingClientRect().right;
+      return !!name && !!left && Math.abs((name.left + name.right) / 2 - (left + right) / 2) < 12;
+    })
+  ));
+  check("Los meses van separados entre sí", await page.evaluate(() => {
+    const ms = [...document.querySelectorAll(".bordes-heat .month")];
+    return ms.length === 3 && ms.slice(1).every((m, i) => m.getBoundingClientRect().left - ms[i].getBoundingClientRect().right >= 10);
+  }));
+  check("La rejilla llena la tarjeta (no sobra hueco a la derecha)", await page.evaluate(() => {
+    const box = document.querySelector(".bordes-heat .container-contents")?.getBoundingClientRect();
+    const map = document.querySelector(".bordes-heat .map")?.getBoundingClientRect();
+    return !!box && !!map && box.right - map.right <= 40;
+  }));
   check("Cada celda lleva su fecha en un atributo", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day")].some((d) => /^\d{2}-\d{2}-\d{4}$/.test(d.getAttribute("data-heat-js-map-date") ?? ""))));
   check("El calendario colorea los días con sesión", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day")].some((d) => /\bday-color-[1-4]\b/.test(d.className))));
   check("La celda de un día con sesión muestra la cifra dentro", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day .count")].some((c) => Number(c.textContent) === 150)));
