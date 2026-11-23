@@ -497,11 +497,16 @@ async function main() {
   await page.waitForFunction(() => document.body.innerText.includes("Terminados"), { timeout: 8000 });
   t = await text(page);
   check("Los terminados aparecen en su propia sección", t.includes("Terminados"));
-  check("Un terminado con foto del diseño se muestra como miniatura sin nombre", await page.evaluate(() => {
+  check("Un terminado con foto se muestra como miniatura centrada con su nombre", await page.evaluate(() => {
     const h3 = [...document.querySelectorAll("h3")].find((h) => h.textContent === "Terminados");
     const section = h3?.nextElementSibling;
     const card = section?.querySelector(".mini");
-    return !!card?.querySelector(".mini-thumb img") && !card.querySelector(".mini-name");
+    const thumb = card?.querySelector(".mini-thumb");
+    if (!card || !thumb?.querySelector("img")) return false;
+    const w = card.getBoundingClientRect().width;
+    const t = thumb.getBoundingClientRect();
+    // La tarjeta se ajusta a la foto: la miniatura queda centrada dentro de ella.
+    return !!card.querySelector(".mini-caption") && w <= 170 && Math.abs(t.left - card.getBoundingClientRect().left - (card.getBoundingClientRect().right - t.right)) < 3;
   }));
   check("El hero pasa a ser el proyecto activo restante", await page.evaluate(() => document.querySelector(".hero-card").textContent.includes("Flor de lis")));
 

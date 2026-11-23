@@ -54,9 +54,17 @@ export function Home({
       .sort((a, b) => b.date.localeCompare(a.date))[0]?.photos?.[0];
     const thumb = finished ? p.photos?.[0] ?? p.image ?? lastSessionPhoto : null;
     return (
-      <button class="mini" key={p.id} onClick={() => onOpenProject(p.id!)} title={p.name}>
+      <button
+        class={`mini${thumb ? " mini-photo" : ""}`}
+        key={p.id}
+        onClick={() => onOpenProject(p.id!)}
+        title={p.name}
+      >
         {thumb ? (
-          <span class="mini-thumb"><img src={thumb} alt={p.name} /></span>
+          <>
+            <span class="mini-thumb"><img src={thumb} alt={p.name} /></span>
+            <span class="mini-caption">{p.name}</span>
+          </>
         ) : (
           <span class="mini-name">{p.name}</span>
         )}

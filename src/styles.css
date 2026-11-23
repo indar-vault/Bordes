@@ -141,6 +141,13 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .search { margin: 10px 0 14px; }
 .search input { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--ink); border-radius: 8px; background: var(--card); }
 .mini { background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 10px; min-width: 180px; font: inherit; cursor: pointer; }
+/* Terminados con foto: la tarjeta se ajusta a la imagen (foto algo más grande,
+   centrada, y el nombre debajo) en lugar de quedar anclada a los 180 px de
+   ancho mínimo, que dejaba la miniatura pegada a la izquierda. */
+.mini-photo { min-width: 132px; }
+.mini-photo .mini-thumb { width: 112px; height: 112px; margin: 0 auto 8px; }
+.mini-photo .mini-caption { display: block; font-size: 0.9em; }
+.mini-photo .mini-num { text-align: center; }
 .mini-thumb { display: block; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; margin-bottom: 6px; }
 .mini-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .mini-num { display: block; margin-top: 4px; font-size: 0.9em; color: var(--muted); }
