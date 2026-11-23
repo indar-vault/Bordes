@@ -249,17 +249,21 @@ async function main() {
   check("C2: la elección de descansos se guarda", await page.waitForFunction(() => document.querySelector(".freeze-select").value === "1", { timeout: 8000 }).then(() => true));
   check("Configuración tiene exportar e importar copias", await page.evaluate(() => [...document.querySelectorAll("button")].some((b) => b.textContent.includes("Exportar copia (JSON)")) && !!document.querySelector(".import input[type=file]")));
 
-  // 6c. B2: calendario de racha (12 semanas, filas por día de la semana)
+  // 6c. B2: calendario de racha con Heat.js (tres meses naturales)
   await clickByText(page, "Inicio");
-  await page.waitForSelector(".heatmap");
-  check("El calendario tiene 84 celdas (12 semanas)", await page.evaluate(() => document.querySelectorAll(".heatmap .heat").length) === 84);
-  check("El calendario colorea los días con sesión", await page.evaluate(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.className.startsWith("heat heat-") && !c.className.includes("empty"))));
-  check("El calendario marca con ✗ los días sin sesión", await page.evaluate(() => [...document.querySelectorAll(".heat-empty")].some((c) => c.textContent.includes("✗"))));
-  check("El calendario muestra las puntadas por día al pasar el ratón", await page.evaluate(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("puntadas"))));
+  await page.waitForSelector(".bordes-heat.heat-js");
+  check("El calendario Heat.js muestra tres meses", await page.evaluate(() => document.querySelectorAll(".bordes-heat .month").length) === 3);
+  check("El calendario tiene los días de la semana en español", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day-name")].map((d) => d.textContent).join(" ") === "Lun Mar Mié Jue Vie Sáb Dom"));
+  check("Cada mes aparece con su nombre", await page.evaluate(() => document.querySelectorAll(".bordes-heat .month-name").length) === 3);
+  check("Cada celda lleva su fecha en un atributo", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day")].some((d) => /^\d{2}-\d{2}-\d{4}$/.test(d.getAttribute("data-heat-js-map-date") ?? ""))));
+  check("El calendario colorea los días con sesión", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day")].some((d) => /\bday-color-[1-4]\b/.test(d.className))));
+  check("La celda de un día con sesión muestra la cifra dentro", await page.evaluate(() => [...document.querySelectorAll(".bordes-heat .day .count")].some((c) => Number(c.textContent) === 150)));
+  check("El día de hoy queda resaltado", await page.evaluate(() => !!document.querySelector(".bordes-heat .day.today")));
+  check("Los días congelados se pintan con escarcha", await page.evaluate(() => !!document.querySelector(".bordes-heat .day.holiday")));
   check("El calendario tiene leyenda con ✗ y ❄", await page.evaluate(() => document.querySelector(".heat-legend")?.textContent.includes("sin sesión") && document.querySelector(".heat-legend")?.textContent.includes("día congelado")));
   check("El contador ❄ indica los descansos que quedan esta semana", await page.evaluate(() => document.querySelector(".freeze-left")?.textContent.includes("de 1 quedan esta semana")));
   await page.select(".metric-select", "minutos");
-  check("El color puede cambiar a minutos", await page.waitForFunction(() => [...document.querySelectorAll(".heatmap .heat")].some((c) => c.title.includes("min")), { timeout: 8000 }).then(() => true));
+  check("El color puede cambiar a minutos", await page.waitForFunction(() => [...document.querySelectorAll(".bordes-heat .day")].some((d) => d.getAttribute("data-heat-js-map-minimum") === "45"), { timeout: 8000 }).then(() => true));
   await page.reload({ waitUntil: "networkidle0" });
   await page.waitForSelector(".metric-select");
   check("La métrica del calendario se recuerda al recargar", await page.evaluate(() => document.querySelector(".metric-select").value === "minutos"));

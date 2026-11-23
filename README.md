@@ -12,10 +12,10 @@ IndexedDB del navegador, con copia de seguridad JSON exportable.
 
 ## Ramas y sitios
 
-- `main`: **v1** en producción → https://indar-vault.github.io/Bordes/
-  (tag `v1.0`, release con el `dist` zip).
-- `v2`: desarrollo de la segunda versión (fusionará con `main` cuando se
-  decida).
+- `main`: **v2** en producción → https://indar-vault.github.io/Bordes/
+  (tag `v2.0`, release con el `dist` zip).
+- `v2`: rama de desarrollo de la segunda versión (se fusiona con `main` cuando
+  se aprueba).
 - `preview`: copia de `v2` con `BASE_PATH: /Bordes-v2/`, publicada como `main`
   del repo espejo [indar-vault/Bordes-v2](https://github.com/indar-vault/Bordes-v2)
   → https://indar-vault.github.io/Bordes-v2/
@@ -25,8 +25,8 @@ IndexedDB del navegador, con copia de seguridad JSON exportable.
 ```bash
 npm install        # una vez
 npm run dev        # desarrollo (http://localhost:5173)
-npm run test       # tests unitarios (vitest, 67)
-npm run smoke      # build + prueba end-to-end real en Chromium (94 comprobaciones)
+npm run test       # tests unitarios (vitest, 68)
+npm run smoke      # build + prueba end-to-end real en Chromium (98 comprobaciones)
 npm run shots      # capturas de pantalla de las pantallas para revisar la UI
 ```
 
@@ -62,6 +62,8 @@ src/
     flosscross.ts importador de patrones Flosscross (.fcjson)
     media.ts      historial de series/películas/YouTube vistas
     summary.ts    resumen imprimible y CSV
+  components/
+    Heatmap.tsx   calendario de racha con Heat.js (librería empaquetada, no CDN)
   screens/        Home, Project, Session, NewProject, Threads, Summary,
                   Settings (Configuración)
   styles.css

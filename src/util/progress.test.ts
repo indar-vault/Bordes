@@ -10,8 +10,8 @@ import {
   streakInfo,
   minutesThisMonth,
   episodesThisMonth,
-  heatmap,
-  heatLevel,
+  HEAT_MINIMA,
+  heatWindow,
   freezeLeft,
 } from "./progress";
 
@@ -97,50 +97,60 @@ describe("progress", () => {
     expect(episodesThisMonth(sessions, today)).toBe(2);
   });
 
-  it("B2: el calendario cubre 8 semanas alineadas en lunes con las puntadas por día", () => {
+  it("B2: heatWindow da las puntadas y minutos de cada día de los tres meses", () => {
     const sessions = [
       s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 300 }]),
+      s("2026-11-18T18:00:00Z", 30, [{ threadId: 1, stitches: 5 }]),
       s("2026-11-16T10:00:00Z", 10, [{ threadId: 1, stitches: 40 }]),
       s("2026-09-30T10:00:00Z", 15, [{ threadId: 1, stitches: 500 }]),
     ];
-    const grid = heatmap(sessions, 8, today); // 2026-11-20 es viernes
-    expect(grid.length).toBe(56);
-    expect(grid[0].date).toBe("2026-11-16"); // lunes de la semana actual
-    expect(grid[2].stitches).toBe(300); // miércoles 18
-    expect(grid[7 * 7 + 2].date).toBe("2026-09-30"); // 7 semanas antes
-    expect(grid[7 * 7 + 2].stitches).toBe(500);
-    const total = grid.reduce((sum, c) => sum + c.stitches, 0);
-    expect(total).toBe(840);
+    const cells = heatWindow(sessions, 0, today).cells;
+    const byDate = new Map(cells.map((c) => [c.date, c]));
+    expect(byDate.get("2026-11-18")?.stitches).toBe(305);
+    expect(byDate.get("2026-11-18")?.minutes).toBe(50);
+    expect(byDate.get("2026-09-30")?.stitches).toBe(500);
+    const total = cells.reduce((sum, c) => sum + c.stitches, 0);
+    expect(total).toBe(845);
   });
 
-  it("el calendario acumula también los minutos por día", () => {
-    const sessions = [
-      s("2026-11-18T10:00:00Z", 45, [{ threadId: 1, stitches: 10 }]),
-      s("2026-11-18T18:00:00Z", 30, [{ threadId: 1, stitches: 5 }]),
-    ];
-    const cell = heatmap(sessions, 8, today).find((c) => c.date === "2026-11-18");
-    expect(cell?.minutes).toBe(75);
-  });
-
-  it("C2: el calendario marca con ❄ los días congelados de la racha", () => {
+  it("C2: heatWindow marca como congelados los días que salva la racha", () => {
     const sessions = [
       s("2026-11-20T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
       s("2026-11-18T10:00:00Z", 20, [{ threadId: 1, stitches: 100 }]),
     ];
-    const info = streakInfo(sessions, today, 1);
-    expect(info.count).toBe(2);
-    expect(info.frozen.has("2026-11-19")).toBe(true);
-    const grid = heatmap(sessions, 8, today, 1);
-    expect(grid.some((c) => c.frozen && c.date === "2026-11-19")).toBe(true);
-    expect(grid.some((c) => c.frozen && c.date === "2026-11-17")).toBe(false); // ya agotó el descanso
-    expect(heatmap(sessions, 8, today, 0).some((c) => c.frozen)).toBe(false);
+    const frozen = heatWindow(sessions, 1, today).cells.filter((c) => c.frozen).map((c) => c.date);
+    expect(frozen).toEqual(["2026-11-19"]);
+    expect(heatWindow(sessions, 0, today).cells.some((c) => c.frozen)).toBe(false);
   });
 
-  it("heatLevel traduce puntadas o minutos a 4 niveles", () => {
-    const punt = (n: number) => ({ date: "x", stitches: n, minutes: 0, frozen: false });
-    const min = (n: number) => ({ date: "x", stitches: 0, minutes: n, frozen: false });
-    expect([0, 10, 60, 200, 400].map((v) => heatLevel(punt(v), "puntadas"))).toEqual([0, 1, 2, 3, 4]);
-    expect([0, 30, 50, 100].map((v) => heatLevel(min(v), "minutos"))).toEqual([0, 2, 3, 4]);
+  it("las gamas del calendario tienen umbrales coherentes (nunca 0)", () => {
+    // Heat.js necesita un nombre de clase por gama; los mínimos 1..4 evitan
+    // que un día vacío se confunda con una gama.
+    expect(HEAT_MINIMA.puntadas).toEqual([1, 50, 150, 300]);
+    expect(HEAT_MINIMA.minutos).toEqual([1, 20, 45, 90]);
+    for (const minima of Object.values(HEAT_MINIMA)) {
+      expect(minima.length).toBe(4);
+      expect(minima[0]).toBeGreaterThan(0);
+      expect(minima.every((v, i) => i === 0 || v > minima[i - 1])).toBe(true);
+    }
+  });
+
+  it("heatWindow cubre los tres meses naturales terminados en el mes actual", () => {
+    const win = heatWindow([], 0, today); // 2026-11-20
+    expect(win.year).toBe(2026);
+    expect(win.startMonth).toBe(8); // septiembre, 0-based
+    expect(win.months).toEqual([9, 10, 11]);
+    expect(win.cells.length).toBe(30 + 31 + 30);
+    expect(win.cells[0].date).toBe("2026-09-01");
+    expect(win.cells[win.cells.length - 1].date).toBe("2026-11-30");
+  });
+
+  it("heatWindow cruza el fin de año sin perder el mes actual", () => {
+    const enero = heatWindow([], 0, new Date(2026, 0, 15));
+    expect([enero.year, enero.startMonth, enero.months].join("|")).toBe("2025|10|11,12,1");
+    const febrero = heatWindow([], 0, new Date(2026, 1, 3));
+    expect([febrero.year, febrero.startMonth, febrero.months].join("|")).toBe("2025|11|12,1,2");
+    expect(febrero.cells[0].date).toBe("2025-12-01");
   });
 
   it("freezeLeft cuenta los descansos que quedan de la semana en curso", () => {

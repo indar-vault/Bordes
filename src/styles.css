@@ -48,33 +48,75 @@ body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: va
 .quick-row { display: flex; align-items: center; gap: 8px; }
 .quick-row input[type=number] { width: 90px; }
 .quick-name { flex: 1; }
-/* B2, rediseñado: calendario horizontal tipo Anki. Filas = días de la semana,
-   columnas = semanas (la actual a la derecha). 4 niveles de intensidad, ✗ si
-   no hubo sesión y ❄ si la racha congeló ese día. */
+/* B2, con Heat.js: calendario de los tres meses naturales. La librería se
+   adapta a la paleta del app mediante sus variables CSS.
+   4 niveles de intensidad, ✗ si no hubo sesión y ❄ si la racha congeló el día. */
 .calendar { margin: 16px 0; }
 .calendar-head { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .calendar-head h2 { margin: 0; font-size: 15px; }
 .freeze-left { font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--ink); border-radius: 8px; padding: 4px 8px; }
 .metric { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
 .metric select { font-size: 13px; padding: 4px 8px; }
-.heatmap { display: grid; grid-template-columns: 30px repeat(12, 30px); gap: 5px; margin-top: 10px; }
-.heat-row { display: contents; }
-.heat-day { font-size: 11px; color: var(--muted); display: grid; place-items: center; }
-.heat { width: 30px; height: 30px; border-radius: 6px; background: #f0ece7; display: grid; place-items: center; font-size: 15px; line-height: 1; }
-.heat-empty { background: #f0ece7; color: #7d746e; border: 1px solid #d3c9c2; }
-.heat-future { background: #faf7f4; }
-.heat-1 { background: #eab3c2; }
-.heat-2 { background: #d67d97; }
-.heat-3 { background: #a94c71; }
-.heat-4 { background: #6d3b5b; }
-.heat-frozen { background: #cfe4ee; color: #2c6b86; border: 1px solid #9fbcd0; }
+
+.bordes-heat {
+  --heat-js-default-width: 100%;
+  --heat-js-default-width-with-side-menu: 100%;
+  --heat-js-container-background-color: var(--card);
+  --heat-js-container-border-color: var(--ink);
+  --heat-js-border-size: 1px;
+  --heat-js-border-radius: 10px;
+  --heat-js-color-white: var(--ink);
+  --heat-js-spacing: 8px;
+  --heat-js-spacing-font-size: 12px;
+  --heat-js-day-size: 30px;
+  --heat-js-day-spacing: 3px;
+  --heat-js-border-radius-day: 6px;
+  --heat-js-border-size-day: 1px;
+  --heat-js-day-background-color: #f0ece7;
+  --heat-js-day-border-color: #d3c9c2;
+  --heat-js-day-color-1-background-color: #eab3c2;
+  --heat-js-day-color-1-border-color: #d69aad;
+  --heat-js-day-color-1-text-color: var(--ink);
+  --heat-js-day-color-2-background-color: #d67d97;
+  --heat-js-day-color-2-border-color: #b96b83;
+  --heat-js-day-color-2-text-color: #fff;
+  --heat-js-day-color-3-background-color: #a94c71;
+  --heat-js-day-color-3-border-color: #8f3d5c;
+  --heat-js-day-color-3-text-color: #fff;
+  --heat-js-day-color-4-background-color: #6d3b5b;
+  --heat-js-day-color-4-border-color: #562f4a;
+  --heat-js-day-color-4-text-color: #fff;
+  --heat-js-holiday-background-color: #cfe4ee;
+  --heat-js-holiday-border-color: #9fbcd0;
+  --heat-js-holiday-text-color: #2c6b86;
+  --heat-js-color-highlight: 109, 59, 91;
+  --heat-js-tooltip-background-color: var(--ink);
+  --heat-js-tooltip-border-color: var(--ink);
+  --heat-js-tooltip-text-color: #fff;
+  margin-top: 10px;
+}
+.bordes-heat.heat-js .guide { display: none; }
+.bordes-heat .day .count { font-size: 11px; }
+/* Días sin sesión: una ✗ discreta. Días congelados: ❄ sobre la escarcha. */
+.bordes-heat .day:not(.holiday):not(.day-color-1):not(.day-color-2):not(.day-color-3):not(.day-color-4)::after {
+  content: "✗";
+  font-size: 12px;
+  color: #9a9089;
+}
+.bordes-heat .day.holiday::after { content: "❄"; font-size: 13px; }
 .heat-legend { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--muted); }
-.heat-legend .heat { width: 18px; height: 18px; font-size: 11px; }
+.swatch { width: 16px; height: 16px; border-radius: 5px; display: inline-grid; place-items: center; font-size: 10px; }
+.sw-1 { background: #eab3c2; }
+.sw-2 { background: #d67d97; }
+.sw-3 { background: #a94c71; color: #fff; }
+.sw-4 { background: #6d3b5b; color: #fff; }
+.sw-empty { background: #f0ece7; border: 1px solid #d3c9c2; color: #9a9089; }
+.sw-frozen { background: #cfe4ee; border: 1px solid #9fbcd0; color: #2c6b86; }
 .freeze-label { display: flex; gap: 8px; align-items: center; margin: 8px 0 14px; }
 
 @media (max-width: 560px) {
-  .heatmap { grid-template-columns: 22px repeat(12, 22px); gap: 4px; }
-  .heat { width: 22px; height: 22px; font-size: 12px; }
+  .bordes-heat { --heat-js-day-size: 22px; --heat-js-day-spacing: 2px; }
+  .bordes-heat .day .count { font-size: 9px; }
 }
 .session-photos { display: flex; gap: 8px; margin: 6px 0; flex-wrap: wrap; }
 .session-photos img { width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #d8d8d8; cursor: zoom-in; }

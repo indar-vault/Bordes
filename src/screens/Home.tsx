@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import type { AppSettings, Project, Session } from "../types";
 import { listProjects, liveSessions, getSettings, setSettings } from "../util/repo";
+import { Heatmap } from "../components/Heatmap";
 import {
   episodesThisMonth,
   freezeLeft,
-  heatLevel,
-  heatmap,
   localDay,
   minutesThisMonth,
   projectStitchesDone,
@@ -88,10 +87,8 @@ export function Home({
   const racha = streakInfo(sessions, new Date(), freezeDays);
   const freezesLeft = freezeLeft(sessions, freezeDays, new Date());
 
-  // B2: calendario de racha de las últimas 12 semanas.
+  // B2: calendario de racha (Heat.js, tres meses naturales).
   const metric = settings?.heatMetric ?? "puntadas";
-  const heat = heatmap(sessions, 12, new Date(), freezeDays);
-  const todayKey = localDay(new Date());
 
   if (projects.length === 0) {
     return (
@@ -196,37 +193,15 @@ export function Home({
                 </select>
               </label>
             </div>
-            <div class="heatmap" aria-label="Calendario de las últimas 12 semanas">
-              {["Lu", "Ma", "Mi", "Ju", "Vi", "Sa", "Do"].map((label, di) => (
-                <div class="heat-row" key={label}>
-                  <span class="heat-day">{label}</span>
-                  {heat.filter((c, i) => i % 7 === di).reverse().map((cell) => {
-                    const level = heatLevel(cell, metric);
-                    const future = cell.date > todayKey;
-                    const cls = cell.frozen
-                      ? "heat heat-frozen"
-                      : future
-                        ? "heat heat-future"
-                        : level > 0
-                          ? `heat heat-${level}`
-                          : "heat heat-empty";
-                    const glyph = cell.frozen ? "❄" : future ? "" : level === 0 ? "✗" : "";
-                    const title = future
-                      ? `${cell.date}: todavía no ha llegado`
-                      : `${cell.date}: ${metric === "minutos" ? `${cell.minutes} min` : `${cell.stitches} puntadas`}${cell.frozen ? " · día congelado" : ""}`;
-                    return <span class={cls} title={title}>{glyph}</span>;
-                  })}
-                </div>
-              ))}
-            </div>
+            <Heatmap sessions={sessions} metric={metric} freezeDays={freezeDays} />
             <div class="heat-legend">
-              <span class="heat heat-1" aria-hidden="true"></span>
-              <span class="heat heat-2" aria-hidden="true"></span>
-              <span class="heat heat-3" aria-hidden="true"></span>
-              <span class="heat heat-4" aria-hidden="true"></span>
+              <span class="swatch sw-1" aria-hidden="true"></span>
+              <span class="swatch sw-2" aria-hidden="true"></span>
+              <span class="swatch sw-3" aria-hidden="true"></span>
+              <span class="swatch sw-4" aria-hidden="true"></span>
               <span>de menos a más {metric}</span>
-              <span class="heat heat-empty">✗</span> sin sesión
-              <span class="heat heat-frozen">❄</span> día congelado
+              <span class="swatch sw-empty" aria-hidden="true">✗</span> sin sesión
+              <span class="swatch sw-frozen" aria-hidden="true">❄</span> día congelado
             </div>
           </div>
 

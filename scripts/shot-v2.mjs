@@ -8,7 +8,10 @@ const OUT = process.env.SHOT_DIR ?? "/tmp/opencode/bordes-shots-v2";
 
 async function clickByText(page, text) {
   await page.evaluate((t) => {
-    const el = [...document.querySelectorAll("button")].find((b) => b.textContent.trim().includes(t));
+    const els = [...document.querySelectorAll("button")];
+    // Preferencia por coincidencia exacta: "editar" no debe confundirse con
+    // "editar hilo".
+    const el = els.find((b) => b.textContent.trim() === t) || els.find((b) => b.textContent.trim().includes(t));
     if (el) el.click();
   }, text);
 }
@@ -144,7 +147,7 @@ async function main() {
 
   // 8. Inicio con el calendario horizontal (A1, B2, C2)
   await clickByText(page, "Inicio");
-  await page.waitForSelector(".heatmap");
+  await page.waitForSelector(".bordes-heat.heat-js");
   await page.evaluate(() => document.querySelector("#project-search").value);
   await page.screenshot({ path: `${OUT}/06-inicio.png`, fullPage: true });
 

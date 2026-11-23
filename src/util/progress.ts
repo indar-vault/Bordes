@@ -174,44 +174,58 @@ export interface HeatCell {
   frozen: boolean;
 }
 
-/** Nivel de intensidad (0–4) de una celda según la métrica elegida. */
-export function heatLevel(cell: HeatCell, metric: "puntadas" | "minutos"): number {
-  if (metric === "minutos") {
-    const v = cell.minutes;
-    return v >= 90 ? 4 : v >= 45 ? 3 : v >= 20 ? 2 : v > 0 ? 1 : 0;
-  }
-  const v = cell.stitches;
-  return v >= 300 ? 4 : v >= 150 ? 3 : v >= 50 ? 2 : v > 0 ? 1 : 0;
-}
+/** Umbrales de las cuatro gamas del calendario (niveles 1–4). */
+export const HEAT_MINIMA: Record<"puntadas" | "minutos", number[]> = {
+  puntadas: [1, 50, 150, 300],
+  minutos: [1, 20, 45, 90],
+};
 
 /**
- * B2: calendario de las últimas `weeks` semanas alineadas en lunes.
- * grid[0] es la semana actual; cada celda { date, stitches, minutes, frozen }.
+ * Ventana del calendario de Heat.js: los tres meses naturales terminados en el
+ * mes actual. Heat.js es anual, así que `startMonth` (0-based) y `months`
+ * (1-based) se calculan sobre el año que toca: cuando la ventana cruza el fin
+ * de año, el año base es el anterior y los meses posteriores a diciembre
+ * rolan al siguiente.
  */
-export function heatmap(
+export function heatWindow(
   sessions: Session[],
-  weeks = 8,
-  today = new Date(),
-  freezeDays = 0
-): HeatCell[] {
+  freezeDays = 0,
+  today = new Date()
+): { year: number; startMonth: number; months: number[]; cells: HeatCell[] } {
+  const m = today.getMonth(); // 0-based
+  let year: number, startMonth: number, months: number[];
+  if (m >= 2) {
+    year = today.getFullYear();
+    startMonth = m - 2;
+    months = [m - 1, m, m + 1];
+  } else if (m === 1) {
+    year = today.getFullYear() - 1;
+    startMonth = 11;
+    months = [12, 1, 2];
+  } else {
+    year = today.getFullYear() - 1;
+    startMonth = 10;
+    months = [11, 12, 1];
+  }
+
   const byStitches = stitchesByDay(sessions);
   const byMinutes = minutesByDay(sessions);
   const frozen = streakInfo(sessions, today, freezeDays).frozen;
-  const monday = new Date(today);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7)); // lunes de esta semana
-  const grid: HeatCell[] = [];
-  for (let w = 0; w < weeks; w++) {
-    for (let d = 0; d < 7; d++) {
-      const day = new Date(monday);
-      day.setDate(day.getDate() - w * 7 + d);
-      const date = localDay(day);
-      grid.push({
-        date,
-        stitches: byStitches.get(date) ?? 0,
-        minutes: byMinutes.get(date) ?? 0,
-        frozen: frozen.has(date),
-      });
-    }
+  const first = localDay(new Date(year, startMonth, 1));
+  const last = localDay(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+
+  const cells: HeatCell[] = [];
+  const cursor = new Date(year, startMonth, 1);
+  while (localDay(cursor) <= last) {
+    const date = localDay(cursor);
+    cells.push({
+      date,
+      stitches: byStitches.get(date) ?? 0,
+      minutes: byMinutes.get(date) ?? 0,
+      frozen: frozen.has(date),
+    });
+    cursor.setDate(cursor.getDate() + 1);
   }
-  return grid;
+
+  return { year, startMonth, months, cells };
 }
